@@ -1,5 +1,6 @@
 import { Application, Container } from 'pixi.js'
 import { GameState } from './GameState'
+import { EconomySystem } from './EconomySystem'
 import { EntityManager } from '@/systems/EntityManager'
 import { RenderSystem } from '@/systems/RenderSystem'
 import { PhysicsSystem } from '@/systems/PhysicsSystem'
@@ -9,11 +10,13 @@ import { Transform } from '@/entities/components/Transform'
 import { Renderable } from '@/entities/components/Renderable'
 import { DebugUIManager } from '@/ui/DebugUIManager'
 import { TowerUpgradeUI, TowerUpgradeListener } from '@/ui/TowerUpgradeUI'
+import { EconomyUI } from '@/ui/EconomyUI'
 import { Entity } from '@/entities/Entity'
 
 export class Game implements TowerUpgradeListener {
   private app: Application
   private gameState: GameState
+  private economySystem: EconomySystem
   private entityManager: EntityManager
   private renderSystem: RenderSystem
   private physicsSystem: PhysicsSystem
@@ -21,6 +24,7 @@ export class Game implements TowerUpgradeListener {
   private gameSystem: GameSystem
   private debugUI: DebugUIManager
   private towerUpgradeUI: TowerUpgradeUI
+  private economyUI: EconomyUI
   private particleContainer: Container
   
   private lastTime = 0
@@ -29,6 +33,7 @@ export class Game implements TowerUpgradeListener {
   constructor(app: Application) {
     this.app = app
     this.gameState = new GameState()
+    this.economySystem = new EconomySystem()
     this.entityManager = new EntityManager()
     
     // パーティクルコンテナを作成（エンティティの上に表示）
@@ -43,9 +48,11 @@ export class Game implements TowerUpgradeListener {
     // InputSystemをGameSystemに渡してタワー選択機能を有効化
     this.gameSystem = new GameSystem(this.entityManager, this.gameState, this.particleContainer, this.inputSystem)
     
-    // タワーアップグレードUIの初期化
+    // UI系の初期化
     this.towerUpgradeUI = new TowerUpgradeUI(this.gameState)
     this.towerUpgradeUI.addListener(this)
+    
+    this.economyUI = new EconomyUI(this.economySystem)
     
     // タワー選択システムとアップグレードUIを連携
     const towerSelectionSystem = this.gameSystem.getTowerSelectionSystem()
@@ -105,9 +112,13 @@ export class Game implements TowerUpgradeListener {
 
     // システム更新（順序重要）
     this.inputSystem.update()
+    this.economySystem.update(deltaTime)
     this.gameSystem.update(deltaTime)
     this.physicsSystem.update(deltaTime, this.entityManager.getEntities())
     this.renderSystem.update(deltaTime, this.entityManager.getEntities())
+    
+    // UI更新
+    this.economyUI.updateDisplay()
     
     // エンティティのクリーンアップ
     this.entityManager.cleanup()
@@ -168,6 +179,10 @@ export class Game implements TowerUpgradeListener {
 
   public getGameSystem(): GameSystem {
     return this.gameSystem
+  }
+
+  public getEconomySystem(): EconomySystem {
+    return this.economySystem
   }
   
   // 衝突判定統計表示
@@ -522,5 +537,96 @@ export class Game implements TowerUpgradeListener {
     } else {
       console.warn('❌ Tower sell failed')
     }
+  }
+
+  // 経済システム機能
+  public showEconomyStats(): void {
+    const stats = this.economySystem.getEconomyStats()
+    console.log('💰 Economy System Statistics:')
+    console.log('  Currencies:')
+    console.log(`    Gold: ${stats.currencies.gold.toLocaleString()}`)
+    console.log(`    Crystal: ${stats.currencies.crystal.toLocaleString()}`)
+    console.log(`    Research: ${stats.currencies.research.toLocaleString()}`)
+    console.log(`    Energy: ${stats.currencies.energy.toLocaleString()}`)
+    
+    console.log('  Passive Income:')
+    console.log(`    Gold: +${stats.passiveIncome.gold}/sec`)
+    console.log(`    Crystal: +${stats.passiveIncome.crystal}/sec`)
+    console.log(`    Research: +${stats.passiveIncome.research}/sec`)
+    console.log(`    Energy: +${stats.passiveIncome.energy}/sec`)
+    
+    console.log('  Investment/Upgrades:')
+    console.log(`    Active Investments: ${stats.activeInvestments}`)
+    console.log(`    Purchased Upgrades: ${stats.purchasedUpgrades}/${stats.totalUpgrades}`)
+    
+    console.log('  Multipliers:')
+    console.log(`    Damage: ${Math.round(stats.multipliers.damage * 100)}%`)
+    console.log(`    Range: ${Math.round(stats.multipliers.range * 100)}%`)
+    console.log(`    Fire Rate: ${Math.round(stats.multipliers.fireRate * 100)}%`)
+    console.log(`    Income: ${Math.round(stats.multipliers.income * 100)}%`)
+  }
+
+  public debugAddCurrency(type: 'gold' | 'crystal' | 'research' | 'energy', amount: number): void {
+    this.economySystem.debugAddCurrency({ [type]: amount })
+    console.log(`💰 Added ${amount} ${type}`)
+    this.economyUI.updateDisplay()
+  }
+
+  public testInvestment(investmentId: string): void {
+    const success = this.economySystem.investIn(investmentId)
+    if (success) {
+      console.log(`✅ Investment successful: ${investmentId}`)
+    } else {
+      console.warn(`❌ Investment failed: ${investmentId} (insufficient funds or already completed)`)
+    }
+    this.economyUI.updateDisplay()
+  }
+
+  public testUpgrade(upgradeId: string): void {
+    const success = this.economySystem.purchaseUpgrade(upgradeId)
+    if (success) {
+      console.log(`✅ Upgrade purchased: ${upgradeId}`)
+    } else {
+      console.warn(`❌ Upgrade failed: ${upgradeId} (insufficient funds or already purchased)`)
+    }
+    this.economyUI.updateDisplay()
+  }
+
+  public listAvailableInvestments(): void {
+    const investments = this.economySystem.getAvailableInvestments()
+    console.log('🏭 Available Investments:')
+    investments.forEach(inv => {
+      const costStr = Object.entries(inv.cost)
+        .filter(([_, amount]) => amount && amount > 0)
+        .map(([type, amount]) => `${amount} ${type}`)
+        .join(', ')
+      
+      console.log(`  ${inv.id}: ${inv.name} (${costStr})`)
+      console.log(`    ${inv.description}`)
+    })
+  }
+
+  public listAvailableUpgrades(): void {
+    const upgrades = this.economySystem.getAvailableUpgrades()
+    console.log('⬆️ Available Upgrades:')
+    upgrades.forEach(upgrade => {
+      const costStr = Object.entries(upgrade.cost)
+        .filter(([_, amount]) => amount && amount > 0)
+        .map(([type, amount]) => `${amount} ${type}`)
+        .join(', ')
+      
+      console.log(`  ${upgrade.id}: ${upgrade.name} (${costStr})`)
+      console.log(`    ${upgrade.description}`)
+    })
+  }
+
+  public showEconomyUI(): void {
+    this.economyUI.show()
+    console.log('💰 Economy UI opened (Ctrl+E to toggle)')
+  }
+
+  public hideEconomyUI(): void {
+    this.economyUI.hide()
+    console.log('💰 Economy UI closed')
   }
 }
