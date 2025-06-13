@@ -11,6 +11,9 @@ import { Renderable } from '@/entities/components/Renderable'
 import { DebugUIManager } from '@/ui/DebugUIManager'
 import { TowerUpgradeUI, TowerUpgradeListener } from '@/ui/TowerUpgradeUI'
 import { EconomyUI } from '@/ui/EconomyUI'
+import { MapEditorUI } from '@/ui/MapEditorUI'
+import { MapEditor } from '@/map/MapEditor'
+import { MapDataUtils } from '@/map/MapData'
 import { Entity } from '@/entities/Entity'
 
 export class Game implements TowerUpgradeListener {
@@ -25,6 +28,8 @@ export class Game implements TowerUpgradeListener {
   private debugUI: DebugUIManager
   private towerUpgradeUI: TowerUpgradeUI
   private economyUI: EconomyUI
+  private mapEditor: MapEditor
+  private mapEditorUI: MapEditorUI
   private particleContainer: Container
   
   private lastTime = 0
@@ -53,6 +58,10 @@ export class Game implements TowerUpgradeListener {
     this.towerUpgradeUI.addListener(this)
     
     this.economyUI = new EconomyUI(this.economySystem)
+    
+    // マップエディターの初期化
+    this.mapEditor = new MapEditor(this.app)
+    this.mapEditorUI = new MapEditorUI(this.mapEditor)
     
     // タワー選択システムとアップグレードUIを連携
     const towerSelectionSystem = this.gameSystem.getTowerSelectionSystem()
@@ -628,5 +637,141 @@ export class Game implements TowerUpgradeListener {
   public hideEconomyUI(): void {
     this.economyUI.hide()
     console.log('💰 Economy UI closed')
+  }
+
+  // マップエディター機能
+  public showMapEditor(): void {
+    this.mapEditorUI.show()
+    console.log('🗺️ Map Editor opened (Ctrl+M to toggle)')
+  }
+
+  public hideMapEditor(): void {
+    this.mapEditorUI.hide()
+    console.log('🗺️ Map Editor closed')
+  }
+
+  public getMapEditor(): MapEditor {
+    return this.mapEditor
+  }
+
+  public loadMapFromEditor(): void {
+    const mapData = this.mapEditor.getMapData()
+    const validation = MapDataUtils.validateMapData(mapData)
+    
+    if (!validation.valid) {
+      console.warn('❌ Cannot load map: validation failed')
+      validation.issues.forEach(issue => console.warn(`  - ${issue}`))
+      return
+    }
+
+    // マップデータをゲームに適用
+    try {
+      // パスをゲームシステムに設定
+      const waveSystem = this.gameSystem.getWaveSystem()
+      waveSystem.setEnemyPath(mapData.pathPoints)
+      
+      // 経済設定を適用
+      this.gameState.reset()
+      this.economySystem.reset()
+      this.economySystem.debugAddCurrency({ gold: mapData.economySettings.startingMoney })
+      
+      // 既存のタワーをクリア
+      const towers = this.entityManager.getEntitiesByType('tower')
+      towers.forEach(tower => this.entityManager.removeEntity(tower.id))
+      
+      console.log('✅ Map loaded successfully from editor')
+      console.log(`  Name: ${mapData.config.name}`)
+      console.log(`  Size: ${mapData.config.width}x${mapData.config.height}`)
+      console.log(`  Path points: ${mapData.pathPoints.length}`)
+      console.log(`  Tower zones: ${mapData.towerZones.length}`)
+      console.log(`  Starting money: ${mapData.economySettings.startingMoney}`)
+    } catch (error) {
+      console.error('❌ Failed to load map:', error)
+    }
+  }
+
+  public exportCurrentMapState(): void {
+    try {
+      // 現在のゲーム状態をマップデータとして出力
+      const currentPath = this.gameSystem.getWaveSystem().getEnemyPath()
+      const mapData = MapDataUtils.createEmptyMap(20, 15, 32)
+      
+      mapData.config.name = 'Current Game State'
+      mapData.config.description = 'Exported from current game session'
+      mapData.pathPoints = currentPath
+      mapData.economySettings.startingMoney = this.gameState.getMoney()
+      
+      const json = MapDataUtils.toJSON(mapData)
+      console.log('📁 Current game state exported:')
+      console.log(json)
+      
+      // ダウンロード
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'current_game_state.json'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+    } catch (error) {
+      console.error('❌ Export failed:', error)
+    }
+  }
+
+  public listDefaultMaps(): void {
+    const maps = MapDataUtils.getDefaultMaps()
+    console.log('📦 Available Default Maps:')
+    maps.forEach((map, index) => {
+      const preview = MapDataUtils.generatePreview(map)
+      console.log(`  ${index}: ${preview.name}`)
+      console.log(`    Size: ${preview.size}`)
+      console.log(`    Difficulty: ${preview.difficulty}`)
+      console.log(`    Description: ${preview.description}`)
+      console.log(`    Valid: ${preview.valid}`)
+    })
+  }
+
+  public loadDefaultMap(index: number): void {
+    try {
+      const maps = MapDataUtils.getDefaultMaps()
+      if (index >= 0 && index < maps.length) {
+        this.mapEditor.setMapData(maps[index])
+        console.log(`📦 Loaded default map ${index}: ${maps[index].config.name}`)
+        
+        // 自動的にゲームにも適用
+        this.loadMapFromEditor()
+      } else {
+        console.warn(`❌ Invalid map index: ${index} (available: 0-${maps.length - 1})`)
+      }
+    } catch (error) {
+      console.error('❌ Failed to load default map:', error)
+    }
+  }
+
+  public testMapEditor(): void {
+    console.log('🧪 Testing Map Editor functionality...')
+    
+    // エディターの状態をテスト
+    const editorState = this.mapEditor.getEditorState()
+    console.log('  Current tool:', editorState.currentTool)
+    console.log('  Grid visible:', editorState.gridVisible)
+    console.log('  Preview mode:', editorState.previewMode)
+    
+    // マップデータをテスト
+    const mapData = this.mapEditor.getMapData()
+    const validation = MapDataUtils.validateMapData(mapData)
+    console.log('  Map validation:', validation.valid)
+    
+    if (!validation.valid) {
+      console.log('  Issues:')
+      validation.issues.forEach(issue => console.log(`    - ${issue}`))
+    }
+    
+    // プレビュー情報
+    const preview = MapDataUtils.generatePreview(mapData)
+    console.log('  Map preview:', preview)
   }
 }
