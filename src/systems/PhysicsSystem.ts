@@ -5,9 +5,9 @@ import { PathFollower } from '@/entities/components/PathFollower'
 import { MissileController } from '@/entities/components/MissileController'
 
 export class PhysicsSystem {
-  private onEnemyReachedGoal?: (entity: Entity) => void
+  private onEnemyReachedGoal: (() => void) | undefined
 
-  constructor(onEnemyReachedGoal?: (entity: Entity) => void) {
+  constructor(onEnemyReachedGoal?: () => void) {
     this.onEnemyReachedGoal = onEnemyReachedGoal
   }
 
@@ -62,7 +62,7 @@ export class PhysicsSystem {
     if (pathFollower && pathFollower.isComplete) {
       // 敵がゴールに到達した場合の処理
       if (entity.type === 'enemy' && this.onEnemyReachedGoal) {
-        this.onEnemyReachedGoal(entity)
+        this.onEnemyReachedGoal()
       }
       entity.setActive(false)
     }

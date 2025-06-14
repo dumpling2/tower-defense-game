@@ -57,7 +57,7 @@ export class Game implements TowerUpgradeListener {
     
     // システムの初期化（パフォーマンス最適化対応）
     this.renderSystem = new RenderSystem(app.stage, app)
-    this.physicsSystem = new PhysicsSystem((enemy) => this.onEnemyReachedGoal(enemy))
+    this.physicsSystem = new PhysicsSystem(() => this.onEnemyReachedGoal())
     this.inputSystem = new InputSystem(app.view as HTMLCanvasElement)
     
     // InputSystemをGameSystemに渡してタワー選択機能を有効化
@@ -227,6 +227,9 @@ export class Game implements TowerUpgradeListener {
     console.log('  game.testMassiveMissileBarrage(100) - Test 100 missiles')
     console.log('  game.showPoolStats() - Show pool statistics')
     console.log('  game.togglePooling() - Toggle object pooling')
+    console.log('  game.testGameSpeed() - Test speed change functionality')
+    console.log('  game.setGameSpeed(2) - Set specific speed (0-3)')
+    console.log('⚡ Use speed buttons (1x/2x/3x) or keyboard (1-3 keys) to change speed')
   }
 
   private setupWaveSystem(path: { x: number; y: number }[]): void {
@@ -270,6 +273,33 @@ export class Game implements TowerUpgradeListener {
 
   public getGameSpeed(): number {
     return this.gameSpeed
+  }
+
+  // テスト用の速度変更コマンド
+  public testGameSpeed(): void {
+    console.log('🧪 Testing game speed functionality...')
+    console.log(`Current speed: ${this.gameSpeed}x`)
+    
+    // 速度を順番にテスト
+    const speeds = [0, 1, 2, 3]
+    let currentIndex = 0
+    
+    const testNextSpeed = () => {
+      if (currentIndex >= speeds.length) {
+        console.log('✅ Speed test completed!')
+        this.setGameSpeed(1) // デフォルトに戻す
+        return
+      }
+      
+      const speed = speeds[currentIndex]
+      console.log(`Testing speed: ${speed}x`)
+      this.setGameSpeed(speed)
+      currentIndex++
+      
+      setTimeout(testNextSpeed, 2000) // 2秒間隔でテスト
+    }
+    
+    testNextSpeed()
   }
   
   // 衝突判定統計表示
@@ -994,7 +1024,7 @@ export class Game implements TowerUpgradeListener {
       if (towerComponent) {
         const stats = (towerComponent as any).getStats()
         return {
-          type: tower.towerType || 'unknown',
+          type: tower.type || 'tower',
           level: stats.level,
           kills: stats.enemiesKilled,
           damage: stats.totalDamage,
@@ -1054,7 +1084,9 @@ export class Game implements TowerUpgradeListener {
           <div style="color: white; margin-bottom: 20px;">
             <h3 style="color: #ffd700; margin-bottom: 10px;">🏗️ タワー統計</h3>
             <div style="max-height: 200px; overflow-y: auto;">
-              ${towerStats.length > 0 ? towerStats.map((tower, index) => `
+              ${towerStats.length > 0 ? towerStats.map((tower, index) => {
+                if (!tower) return ''
+                return `
                 <div style="
                   background: rgba(255, 255, 255, 0.1);
                   padding: 10px;
@@ -1073,7 +1105,8 @@ export class Game implements TowerUpgradeListener {
                     <span>効率: ${tower.efficiency}%</span>
                   </div>
                 </div>
-              `).join('') : '<p style="text-align: center; color: #999;">タワーが配置されていませんでした</p>'}
+                `
+              }).join('') : '<p style="text-align: center; color: #999;">タワーが配置されていませんでした</p>'}
             </div>
           </div>
           
@@ -1154,7 +1187,7 @@ export class Game implements TowerUpgradeListener {
   }
 
   // 敵がゴールに到達した際の処理
-  private onEnemyReachedGoal(enemy: Entity): void {
+  private onEnemyReachedGoal(): void {
     // ライフを1減らす
     this.gameState.loseLife()
     
