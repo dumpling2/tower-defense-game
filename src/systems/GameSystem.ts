@@ -9,7 +9,7 @@ import { GameState } from '@/game/GameState'
 import { PoolableEntity } from '@/utils/pools/PoolableEntity'
 import { CollisionSystem } from './CollisionSystem'
 import { ParticleSystem } from '@/effects/ParticleSystem'
-import { TowerType } from '@/entities/types/TowerTypes'
+import { TowerType, TOWER_CONFIGS } from '@/entities/types/TowerTypes'
 import { Tower } from '@/entities/components/Tower'
 import { EnemyType } from '@/entities/types/EnemyTypes'
 import { WaveSystem } from './WaveSystem'
@@ -194,8 +194,19 @@ export class GameSystem {
   }
 
   // ゲームエンティティ生成のヘルパーメソッド
-  public createTower(x: number, y: number, type: TowerType = 'basic'): Entity {
-    return this.entityFactory.createTower(x, y, type)
+  public createTower(x: number, y: number, type: TowerType = 'basic'): Entity | null {
+    const config = TOWER_CONFIGS[type]
+    
+    // 資金チェック
+    if (!this.gameState.spendMoney(config.cost)) {
+      console.warn(`💰 Insufficient funds to build ${type} tower (cost: ${config.cost})`)
+      return null
+    }
+    
+    const tower = this.entityFactory.createTower(x, y, type)
+    console.log(`🏗️ Built ${type} tower at (${x}, ${y}) for ${config.cost} coins`)
+    
+    return tower
   }
 
   public createEnemy(path: { x: number; y: number }[], speed?: number, type?: EnemyType): Entity {

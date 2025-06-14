@@ -51,7 +51,7 @@ export class TowerPurchaseUI {
               </div>
               <div class="tower-cost">
                 <span class="cost-icon">💰</span>
-                <span class="cost-value">50</span>
+                <span class="cost-value">100</span>
               </div>
             </div>
             <button class="purchase-btn" id="purchase-basic">
@@ -71,7 +71,7 @@ export class TowerPurchaseUI {
               </div>
               <div class="tower-cost">
                 <span class="cost-icon">💰</span>
-                <span class="cost-value">75</span>
+                <span class="cost-value">150</span>
               </div>
             </div>
             <button class="purchase-btn" id="purchase-rapid">
@@ -91,7 +91,7 @@ export class TowerPurchaseUI {
               </div>
               <div class="tower-cost">
                 <span class="cost-icon">💰</span>
-                <span class="cost-value">150</span>
+                <span class="cost-value">250</span>
               </div>
             </div>
             <button class="purchase-btn" id="purchase-heavy">
@@ -111,7 +111,7 @@ export class TowerPurchaseUI {
               </div>
               <div class="tower-cost">
                 <span class="cost-icon">💰</span>
-                <span class="cost-value">200</span>
+                <span class="cost-value">300</span>
               </div>
             </div>
             <button class="purchase-btn" id="purchase-sniper">
@@ -132,7 +132,7 @@ export class TowerPurchaseUI {
               <div class="tower-desc">範囲攻撃</div>
               <div class="tower-cost">
                 <span class="cost-icon">💰</span>
-                <span class="cost-value">250</span>
+                <span class="cost-value">200</span>
               </div>
             </div>
             <button class="purchase-btn" id="purchase-splash">
