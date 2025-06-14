@@ -175,22 +175,62 @@ export class InputSystem {
     const target = event.target as HTMLElement
     if (!target) return false
     
+    // チュートリアルが起動中かチェック
+    const tutorialOverlay = document.getElementById('tutorial-overlay')
+    const isTutorialActive = tutorialOverlay && window.getComputedStyle(tutorialOverlay).display !== 'none'
+    
+    if (isTutorialActive) {
+      console.log(`🎓 InputSystem: Tutorial is active, checking tutorial elements`)
+    }
+    
     // UIクラスをチェック
     const uiClasses = [
       'game-hud', 'tower-purchase-panel', 'player-control-panel',
       'purchase-btn', 'control-btn', 'tower-card', 'debug-panel',
-      'tutorial-overlay', 'tutorial-panel'
+      'tutorial-overlay', 'tutorial-panel', 'tutorial-content',
+      'tutorial-nav-btn', 'tutorial-navigation', 'tutorial-highlight'
     ]
+    
+    // デバッグ情報
+    console.log(`🔍 InputSystem: Checking click target:`, {
+      tagName: target.tagName,
+      className: target.className,
+      id: target.id,
+      zIndex: window.getComputedStyle(target).zIndex
+    })
     
     // 要素自体またはその親要素がUIクラスを持っているかチェック
     let element = target
-    while (element && element !== document.body) {
+    let depth = 0
+    while (element && element !== document.body && depth < 10) {
       const classes = element.className || ''
+      const elementId = element.id || ''
+      
+      console.log(`🔍 InputSystem: Checking element at depth ${depth}:`, {
+        tagName: element.tagName,
+        className: classes,
+        id: elementId,
+        zIndex: window.getComputedStyle(element).zIndex
+      })
+      
+      // チュートリアル要素の特別処理
+      if (isTutorialActive && (
+        classes.includes('tutorial') || 
+        elementId.includes('tutorial') ||
+        uiClasses.some(uiClass => classes.includes(uiClass))
+      )) {
+        console.log(`🎓 InputSystem: Tutorial UI element detected - ${element.className || element.tagName}`)
+        return true
+      }
+      
+      // 通常のUI要素チェック
       if (uiClasses.some(uiClass => classes.includes(uiClass))) {
         console.log(`🎮 InputSystem: UI element detected - ${element.className}`)
         return true
       }
+      
       element = element.parentElement as HTMLElement
+      depth++
     }
     
     // z-indexが高い要素（UIパネル）かチェック
@@ -201,6 +241,7 @@ export class InputSystem {
       return true
     }
     
+    console.log(`🔍 InputSystem: No UI element detected, allowing canvas interaction`)
     return false
   }
   

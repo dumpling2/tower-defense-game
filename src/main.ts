@@ -167,6 +167,8 @@ if (import.meta.env.DEV) {
       console.log('  debugTowerPurchaseUI() - Debug tower purchase panel')
       console.log('  testTowerPurchaseButtons() - Test tower purchase buttons')
       console.log('  diagnoseClickability() - Diagnose UI button clickability issues')
+      console.log('  debugTutorialButtons() - Debug tutorial button states')
+      console.log('  forceTestTutorial() - Force start tutorial for testing')
       console.log('\nKeyboard shortcuts:')
       console.log('  Ctrl+Shift+D - Run debug')
       console.log('  Ctrl+Shift+T - Test buttons')
@@ -219,6 +221,26 @@ if (import.meta.env.DEV) {
       game.diagnoseuClickability()
     } else {
       console.error('❌ Game instance or diagnosis method not available')
+    }
+  }
+
+  ;(window as any).debugTutorialButtons = () => {
+    console.log('🎓 === DEBUG TUTORIAL BUTTONS ===')
+    const game = (window as any).game
+    if (game && game.debugTutorialButtons) {
+      game.debugTutorialButtons()
+    } else {
+      console.error('❌ Game instance or tutorial debug method not available')
+    }
+  }
+
+  ;(window as any).forceTestTutorial = () => {
+    console.log('🎓 === FORCE TEST TUTORIAL ===')
+    const game = (window as any).game
+    if (game && game.forceTestTutorial) {
+      game.forceTestTutorial()
+    } else {
+      console.error('❌ Game instance or tutorial test method not available')
     }
   }
   

@@ -914,6 +914,62 @@ export class Game implements TowerUpgradeListener {
     }
   }
 
+  // チュートリアルボタンのデバッグ機能
+  public debugTutorialButtons(): void {
+    console.log('🎓 === TUTORIAL BUTTONS DEBUG ===')
+    
+    // チュートリアルオーバーレイの状態
+    const tutorialOverlay = document.getElementById('tutorial-overlay')
+    console.log('Tutorial Overlay:', {
+      exists: !!tutorialOverlay,
+      visible: tutorialOverlay ? window.getComputedStyle(tutorialOverlay).display : 'N/A',
+      zIndex: tutorialOverlay ? window.getComputedStyle(tutorialOverlay).zIndex : 'N/A'
+    })
+    
+    // チュートリアルボタンの状態
+    const buttonIds = ['tutorial-prev', 'tutorial-next', 'tutorial-skip']
+    buttonIds.forEach(id => {
+      const button = document.getElementById(id) as HTMLButtonElement
+      console.log(`Button ${id}:`, {
+        exists: !!button,
+        disabled: button?.disabled,
+        className: button?.className,
+        pointerEvents: button ? window.getComputedStyle(button).pointerEvents : 'N/A',
+        zIndex: button ? window.getComputedStyle(button).zIndex : 'N/A',
+        display: button ? window.getComputedStyle(button).display : 'N/A',
+        visibility: button ? window.getComputedStyle(button).visibility : 'N/A'
+      })
+      
+      // ボタンのクリックテスト
+      if (button) {
+        console.log(`Testing click on ${id}...`)
+        const rect = button.getBoundingClientRect()
+        console.log(`  Button position: ${rect.left}, ${rect.top}, ${rect.width}x${rect.height}`)
+        
+        // プログラム的にクリックをテスト
+        try {
+          button.click()
+          console.log(`  ✅ Programmatic click successful on ${id}`)
+        } catch (error) {
+          console.error(`  ❌ Programmatic click failed on ${id}:`, error)
+        }
+      }
+    })
+    
+    console.log('================================')
+  }
+
+  // チュートリアルの強制テスト開始
+  public forceTestTutorial(): void {
+    console.log('🎓 Force starting tutorial for testing...')
+    this.startTutorial()
+    
+    setTimeout(() => {
+      console.log('🎓 Running tutorial button debug after 2 seconds...')
+      this.debugTutorialButtons()
+    }, 2000)
+  }
+
   public getMapEditor(): MapEditor {
     return this.mapEditor
   }

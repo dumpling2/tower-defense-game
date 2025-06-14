@@ -310,6 +310,8 @@ export class TutorialUI {
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
+        pointer-events: auto !important;
+        z-index: 10004;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
@@ -582,35 +584,58 @@ export class TutorialUI {
     const canGoBack = !isFirstStep
     // canGoForward変数は現在使用されていませんが、将来の拡張のため保持
 
-    this.navigationPanel.innerHTML = `
-      <button class="tutorial-nav-btn" id="tutorial-prev" ${!canGoBack ? 'disabled' : ''}>
-        <span class="tutorial-icon">◀</span>
-        戻る
-      </button>
-      
-      <button class="tutorial-nav-btn skip" id="tutorial-skip">
-        <span class="tutorial-icon">⏭</span>
-        スキップ
-      </button>
-      
-      <button class="tutorial-nav-btn primary" id="tutorial-next">
-        <span class="tutorial-icon">${isLastStep ? '🎉' : '▶'}</span>
-        ${isLastStep ? '完了' : '次へ'}
-      </button>
-    `
+    // 既存のイベントリスナーをクリア
+    this.navigationPanel.innerHTML = ''
 
-    // イベントリスナーを設定
-    document.getElementById('tutorial-prev')?.addEventListener('click', () => {
+    // 戻るボタン
+    const prevBtn = document.createElement('button')
+    prevBtn.className = 'tutorial-nav-btn'
+    prevBtn.id = 'tutorial-prev'
+    prevBtn.disabled = !canGoBack
+    prevBtn.innerHTML = '<span class="tutorial-icon">◀</span>戻る'
+    prevBtn.style.pointerEvents = 'auto'
+    prevBtn.style.zIndex = '10004'
+    prevBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      console.log('🎓 Tutorial: Previous button clicked')
       if (this.onPrevious) this.onPrevious()
     })
 
-    document.getElementById('tutorial-next')?.addEventListener('click', () => {
+    // スキップボタン
+    const skipBtn = document.createElement('button')
+    skipBtn.className = 'tutorial-nav-btn skip'
+    skipBtn.id = 'tutorial-skip'
+    skipBtn.innerHTML = '<span class="tutorial-icon">⏭</span>スキップ'
+    skipBtn.style.pointerEvents = 'auto'
+    skipBtn.style.zIndex = '10004'
+    skipBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      console.log('🎓 Tutorial: Skip button clicked')
+      if (this.onSkip) this.onSkip()
+    })
+
+    // 次へボタン
+    const nextBtn = document.createElement('button')
+    nextBtn.className = 'tutorial-nav-btn primary'
+    nextBtn.id = 'tutorial-next'
+    nextBtn.innerHTML = `<span class="tutorial-icon">${isLastStep ? '🎉' : '▶'}</span>${isLastStep ? '完了' : '次へ'}`
+    nextBtn.style.pointerEvents = 'auto'
+    nextBtn.style.zIndex = '10004'
+    nextBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      console.log('🎓 Tutorial: Next button clicked')
       if (this.onNext) this.onNext()
     })
 
-    document.getElementById('tutorial-skip')?.addEventListener('click', () => {
-      if (this.onSkip) this.onSkip()
-    })
+    // ボタンを追加
+    this.navigationPanel.appendChild(prevBtn)
+    this.navigationPanel.appendChild(skipBtn)
+    this.navigationPanel.appendChild(nextBtn)
+
+    console.log('🎓 Tutorial: Navigation buttons created and styled')
   }
 
   /**
