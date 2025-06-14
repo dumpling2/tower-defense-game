@@ -175,7 +175,8 @@ export class BatchRenderer {
     let skippedCount = 0
     
     for (const entity of entities) {
-      if (['missile', 'enemy', 'tower'].includes(entity.type)) {
+      // タワーは最適化対象から除外（各タイプで異なるビジュアルを保持するため）
+      if (['missile', 'enemy'].includes(entity.type)) {
         try {
           // エンティティが適切にセットアップされているかチェック
           const renderable = entity.getComponent('renderable')
@@ -189,10 +190,12 @@ export class BatchRenderer {
           console.warn(`🎨 Failed to optimize entity ${entity.id}:`, error)
           skippedCount++
         }
+      } else if (entity.type === 'tower') {
+        skippedCount++ // タワーはスキップとしてカウント
       }
     }
     
-    console.log(`🚀 BatchRenderer: Optimized ${optimizedCount} entities to sprites (${skippedCount} skipped)`)
+    console.log(`🚀 BatchRenderer: Optimized ${optimizedCount} entities to sprites (${skippedCount} skipped, towers preserved)`)
   }
 
   public getStats() {
