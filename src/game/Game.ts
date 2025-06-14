@@ -43,6 +43,7 @@ export class Game implements TowerUpgradeListener {
   private lastTime = 0
   private isRunning = false
   private gameOverShown = false
+  private gameSpeed = 1.0
 
   constructor(app: Application) {
     this.app = app
@@ -178,12 +179,15 @@ export class Game implements TowerUpgradeListener {
       return
     }
 
+    // ゲーム速度を適用したdeltaTime
+    const adjustedDeltaTime = deltaTime * this.gameSpeed
+
     // システム更新（順序重要）
     this.inputSystem.update()
-    this.economySystem.update(deltaTime)
-    this.gameSystem.update(deltaTime)
-    this.physicsSystem.update(deltaTime, this.entityManager.getEntities())
-    this.renderSystem.update(deltaTime, this.entityManager.getEntities())
+    this.economySystem.update(adjustedDeltaTime)
+    this.gameSystem.update(adjustedDeltaTime)
+    this.physicsSystem.update(adjustedDeltaTime, this.entityManager.getEntities())
+    this.renderSystem.update(adjustedDeltaTime, this.entityManager.getEntities())
     
     // UI更新
     this.economyUI.updateDisplay()
@@ -197,6 +201,9 @@ export class Game implements TowerUpgradeListener {
     
     // ゲーム状態を playing に設定
     this.gameState.setState('playing')
+    
+    // ゲーム速度を初期化
+    this.gameSpeed = 1.0
     
     // サンプルパスの定義（左から右への直線）
     const samplePath = [
@@ -253,6 +260,16 @@ export class Game implements TowerUpgradeListener {
 
   public getEconomySystem(): EconomySystem {
     return this.economySystem
+  }
+
+  // ゲーム速度制御
+  public setGameSpeed(speed: number): void {
+    this.gameSpeed = Math.max(0, Math.min(3, speed)) // 0-3の範囲に制限
+    console.log(`⚡ Game speed set to ${this.gameSpeed}x`)
+  }
+
+  public getGameSpeed(): number {
+    return this.gameSpeed
   }
   
   // 衝突判定統計表示

@@ -97,7 +97,9 @@ export class PlayerUI {
     const speedButtons = document.querySelectorAll('.speed-btn')
     speedButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const speed = parseInt((e.target as HTMLElement).dataset.speed || '1') as GameSpeed
+        const target = e.currentTarget as HTMLElement
+        const speed = parseInt(target.dataset.speed || '1') as GameSpeed
+        console.log(`🎮 Speed button clicked: ${speed}x`)
         this.setGameSpeed(speed)
       })
     })
@@ -149,13 +151,8 @@ export class PlayerUI {
   }
 
   private setGameSpeed(speed: GameSpeed): void {
-    // this.gameSpeed = speed  // 将来的に使用する可能性がある
-    
-    // PixiJSのticker速度を変更
-    const app = this.game.getApp()
-    if (app) {
-      app.ticker.speed = speed
-    }
+    // Gameクラスの速度制御メソッドを使用
+    this.game.setGameSpeed(speed)
 
     // ボタンの状態を更新
     document.querySelectorAll('.speed-btn').forEach(btn => {
@@ -197,6 +194,15 @@ export class PlayerUI {
     const startBtn = document.getElementById('start-wave-btn') as HTMLButtonElement
     const waveTimer = document.getElementById('wave-timer')
     const countdown = document.getElementById('wave-countdown')
+
+    // 現在のゲーム速度をボタンに反映
+    const currentSpeed = this.game.getGameSpeed()
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+      btn.classList.remove('active')
+    })
+    if (currentSpeed > 0) {
+      document.querySelector(`[data-speed="${currentSpeed}"]`)?.classList.add('active')
+    }
 
     // ウェーブ開始ボタンの状態
     if (waveProgress.status === 'active') {
