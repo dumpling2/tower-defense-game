@@ -1,5 +1,5 @@
 import { MapEditor, EditorTool } from '@/map/MapEditor'
-import { MapData, MapDataUtils } from '@/map/MapData'
+import { MapDataUtils } from '@/map/MapData'
 
 /**
  * マップエディターUI

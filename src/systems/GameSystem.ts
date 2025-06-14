@@ -292,7 +292,7 @@ export class GameSystem {
 
     const target = enemies[0]
     let totalMissiles = 0
-    let testStartTime = Date.now()
+    const testStartTime = Date.now()
     
     console.log(`🔥 Starting continuous missile test: ${missilesPerSecond}/sec for ${durationSeconds}s`)
     

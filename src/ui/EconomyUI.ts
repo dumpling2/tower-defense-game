@@ -675,7 +675,7 @@ export class EconomyUI {
     element.className = 'investment-item'
 
     const costElements = Object.entries(investment.cost)
-      .filter(([_, amount]) => amount && amount > 0)
+      .filter(([, amount]) => amount && amount > 0)
       .map(([type, amount]) => {
         const icon = this.getCurrencyIcon(type as CurrencyType)
         return `<span class="cost-item">${icon}${amount}</span>`
@@ -735,7 +735,7 @@ export class EconomyUI {
     element.className = 'upgrade-item'
 
     const costElements = Object.entries(upgrade.cost)
-      .filter(([_, amount]) => amount && amount > 0)
+      .filter(([, amount]) => amount && amount > 0)
       .map(([type, amount]) => {
         const icon = this.getCurrencyIcon(type as CurrencyType)
         return `<span class="cost-item">${icon}${amount}</span>`

@@ -166,7 +166,7 @@ export class SpatialHash {
     let maxEntitiesPerCell = 0
     let cellCount = 0
 
-    for (const [_, cell] of this.cells) {
+    for (const [, cell] of this.cells) {
       cellCount++
       totalEntities += cell.size
       maxEntitiesPerCell = Math.max(maxEntitiesPerCell, cell.size)

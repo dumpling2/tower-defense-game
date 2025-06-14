@@ -1,4 +1,4 @@
-import { Application, Graphics, Container, Text, TextStyle, FederatedPointerEvent } from 'pixi.js'
+import { Application, Graphics, Container, Text } from 'pixi.js'
 import { MapData, MapCell, CellType, MapDataUtils } from './MapData'
 
 export type EditorTool = 'path' | 'tower_zone' | 'obstacle' | 'start' | 'end' | 'eraser'
@@ -15,7 +15,6 @@ export interface EditorState {
  * ドラッグ&ドロップによるビジュアルマップ編集機能
  */
 export class MapEditor {
-  private app: Application
   private container: Container
   private gridContainer: Container
   private cellContainer: Container
@@ -30,8 +29,7 @@ export class MapEditor {
   private lastHoveredCell = { x: -1, y: -1 }
   private pathIndex = 0
   
-  constructor(app: Application, initialMapData?: MapData) {
-    this.app = app
+  constructor(_app: Application, initialMapData?: MapData) {
     
     // コンテナの階層構造
     this.container = new Container()
@@ -125,14 +123,14 @@ export class MapEditor {
         cellGfx.cursor = 'pointer'
         
         // セルのクリック・ドラッグイベント
-        cellGfx.on('pointerdown', (event: FederatedPointerEvent) => {
-          this.onCellPointerDown(x, y, event)
+        cellGfx.on('pointerdown', () => {
+          this.onCellPointerDown(x, y)
         })
-        cellGfx.on('pointerover', (event: FederatedPointerEvent) => {
-          this.onCellPointerOver(x, y, event)
+        cellGfx.on('pointerover', () => {
+          this.onCellPointerOver(x, y)
         })
-        cellGfx.on('pointerup', (event: FederatedPointerEvent) => {
-          this.onCellPointerUp(x, y, event)
+        cellGfx.on('pointerup', () => {
+          this.onCellPointerUp()
         })
         
         this.cellGraphics[y][x] = cellGfx
@@ -159,7 +157,7 @@ export class MapEditor {
     
     // セルタイプに応じた色分け
     let fillColor: number
-    let borderColor: number = 0x666666
+    const borderColor: number = 0x666666
     let alpha = 1.0
     
     switch (cell.type) {
@@ -221,7 +219,7 @@ export class MapEditor {
     }
   }
   
-  private onCellPointerDown(x: number, y: number, event: FederatedPointerEvent): void {
+  private onCellPointerDown(x: number, y: number): void {
     if (this.editorState.previewMode) return
     
     this.editorState.isDrawing = true
@@ -233,7 +231,7 @@ export class MapEditor {
     }
   }
   
-  private onCellPointerOver(x: number, y: number, event: FederatedPointerEvent): void {
+  private onCellPointerOver(x: number, y: number): void {
     if (this.editorState.previewMode) return
     
     // ホバー効果
@@ -248,7 +246,7 @@ export class MapEditor {
     }
   }
   
-  private onCellPointerUp(x: number, y: number, event: FederatedPointerEvent): void {
+  private onCellPointerUp(): void {
     if (this.editorState.previewMode) return
     
     this.editorState.isDrawing = false
@@ -262,4 +260,311 @@ export class MapEditor {
   private updateHoverEffect(x: number, y: number): void {
     // 前回のホバー効果をクリア
     if (this.lastHoveredCell.x >= 0 && this.lastHoveredCell.y >= 0) {
-      const prevCell = this.mapData.cells[this.lastHoveredCell.y][this.lastHoveredCell.x]\n      this.updateCellVisual(this.lastHoveredCell.x, this.lastHoveredCell.y, prevCell)\n    }\n    \n    // 新しいホバー効果\n    const cellGfx = this.cellGraphics[y][x]\n    const { cellSize } = this.mapData.config\n    \n    // ホバー時のハイライト\n    const highlight = new Graphics()\n    highlight.lineStyle(3, 0xFFFFFF, 0.8)\n    highlight.drawRect(-1, -1, cellSize + 2, cellSize + 2)\n    cellGfx.addChild(highlight)\n    \n    // 0.1秒後にハイライトを削除\n    setTimeout(() => {\n      if (highlight.parent) {\n        highlight.parent.removeChild(highlight)\n        highlight.destroy()\n      }\n    }, 100)\n  }\n  \n  private applyTool(x: number, y: number): void {\n    if (x < 0 || x >= this.mapData.config.width || y < 0 || y >= this.mapData.config.height) {\n      return\n    }\n    \n    const cell = this.mapData.cells[y][x]\n    let newType: CellType = cell.type\n    \n    switch (this.editorState.currentTool) {\n      case 'path':\n        newType = 'path'\n        cell.pathIndex = this.pathIndex++\n        break\n      case 'tower_zone':\n        newType = 'tower_zone'\n        break\n      case 'obstacle':\n        newType = 'obstacle'\n        break\n      case 'start':\n        // 既存のスタート地点をクリア\n        this.clearCellType('start')\n        newType = 'start'\n        this.mapData.startPosition = { x, y }\n        break\n      case 'end':\n        // 既存のエンド地点をクリア\n        this.clearCellType('end')\n        newType = 'end'\n        this.mapData.endPosition = { x, y }\n        break\n      case 'eraser':\n        newType = 'empty'\n        delete cell.pathIndex\n        break\n    }\n    \n    if (cell.type !== newType) {\n      cell.type = newType\n      this.updateCellVisual(x, y, cell)\n      \n      // マップの更新時刻を記録\n      this.mapData.config.updatedAt = Date.now()\n    }\n  }\n  \n  private clearCellType(type: CellType): void {\n    const { config, cells } = this.mapData\n    \n    for (let y = 0; y < config.height; y++) {\n      for (let x = 0; x < config.width; x++) {\n        if (cells[y][x].type === type) {\n          cells[y][x].type = 'empty'\n          this.updateCellVisual(x, y, cells[y][x])\n        }\n      }\n    }\n  }\n  \n  private updatePathPoints(): void {\n    const pathCells: { x: number, y: number, index: number }[] = []\n    const { config, cells } = this.mapData\n    \n    // パスセルを収集\n    for (let y = 0; y < config.height; y++) {\n      for (let x = 0; x < config.width; x++) {\n        const cell = cells[y][x]\n        if ((cell.type === 'path' || cell.type === 'start' || cell.type === 'end') && \n            cell.pathIndex !== undefined) {\n          pathCells.push({ x, y, index: cell.pathIndex })\n        }\n      }\n    }\n    \n    // インデックス順でソート\n    pathCells.sort((a, b) => a.index - b.index)\n    \n    // パスポイントを更新\n    this.mapData.pathPoints = pathCells.map(cell => {\n      const worldPos = MapDataUtils.cellToWorld(cell.x, cell.y, config.cellSize)\n      return {\n        x: worldPos.x,\n        y: worldPos.y,\n        cellX: cell.x,\n        cellY: cell.y\n      }\n    })\n    \n    console.log(`🛤️ Path updated: ${this.mapData.pathPoints.length} points`)\n  }\n  \n  // エディター制御メソッド\n  public setTool(tool: EditorTool): void {\n    this.editorState.currentTool = tool\n    console.log(`🔧 Tool changed to: ${tool}`)\n  }\n  \n  public toggleGrid(): void {\n    this.editorState.gridVisible = !this.editorState.gridVisible\n    this.gridContainer.visible = this.editorState.gridVisible\n    console.log(`🔲 Grid ${this.editorState.gridVisible ? 'shown' : 'hidden'}`)\n  }\n  \n  public togglePreviewMode(): void {\n    this.editorState.previewMode = !this.editorState.previewMode\n    \n    if (this.editorState.previewMode) {\n      // プレビューモード：エディット機能を無効化\n      this.cellContainer.eventMode = 'none'\n      console.log('👁️ Preview mode enabled')\n    } else {\n      // エディットモード：エディット機能を有効化\n      this.cellContainer.eventMode = 'auto'\n      console.log('✏️ Edit mode enabled')\n    }\n  }\n  \n  public clearMap(): void {\n    const { config, cells } = this.mapData\n    \n    for (let y = 0; y < config.height; y++) {\n      for (let x = 0; x < config.width; x++) {\n        cells[y][x].type = 'empty'\n        delete cells[y][x].pathIndex\n        this.updateCellVisual(x, y, cells[y][x])\n      }\n    }\n    \n    this.mapData.pathPoints = []\n    this.mapData.towerZones = []\n    this.pathIndex = 0\n    \n    console.log('🗑️ Map cleared')\n  }\n  \n  public generateAutoPath(): void {\n    this.clearMap()\n    \n    // 自動パス生成\n    this.mapData.pathPoints = MapDataUtils.generateStraightPath(this.mapData)\n    this.updateVisualCells()\n    \n    console.log('🤖 Auto path generated')\n  }\n  \n  public generateTowerZones(): void {\n    // 既存のタワーゾーンをクリア\n    const { config, cells } = this.mapData\n    for (let y = 0; y < config.height; y++) {\n      for (let x = 0; x < config.width; x++) {\n        if (cells[y][x].type === 'tower_zone') {\n          cells[y][x].type = 'empty'\n        }\n      }\n    }\n    \n    // 自動タワーゾーン生成\n    MapDataUtils.generateTowerZones(this.mapData)\n    this.updateVisualCells()\n    \n    console.log(`🏗️ Generated ${this.mapData.towerZones.length} tower zones`)\n  }\n  \n  public validateMap(): { valid: boolean, issues: string[] } {\n    const validation = MapDataUtils.validateMapData(this.mapData)\n    \n    console.log('✅ Map validation:')\n    console.log(`  Valid: ${validation.valid}`)\n    if (validation.issues.length > 0) {\n      console.log('  Issues:')\n      validation.issues.forEach(issue => console.log(`    - ${issue}`))\n    }\n    \n    return validation\n  }\n  \n  public exportMap(): string {\n    try {\n      const json = MapDataUtils.toJSON(this.mapData)\n      console.log('📁 Map exported to JSON')\n      return json\n    } catch (error) {\n      console.error('❌ Export failed:', error)\n      throw error\n    }\n  }\n  \n  public importMap(json: string): void {\n    try {\n      const newMapData = MapDataUtils.fromJSON(json)\n      this.mapData = newMapData\n      \n      // エディターを再構築\n      this.createGrid()\n      this.createCells()\n      this.updateVisualCells()\n      \n      console.log('📁 Map imported successfully')\n      console.log(`  Name: ${this.mapData.config.name}`)\n      console.log(`  Size: ${this.mapData.config.width}x${this.mapData.config.height}`)\n    } catch (error) {\n      console.error('❌ Import failed:', error)\n      throw error\n    }\n  }\n  \n  public resizeMap(width: number, height: number): void {\n    const oldData = this.mapData\n    this.mapData = MapDataUtils.createEmptyMap(width, height, oldData.config.cellSize)\n    \n    // 既存データを可能な限りコピー\n    const minWidth = Math.min(width, oldData.config.width)\n    const minHeight = Math.min(height, oldData.config.height)\n    \n    for (let y = 0; y < minHeight; y++) {\n      for (let x = 0; x < minWidth; x++) {\n        this.mapData.cells[y][x] = { ...oldData.cells[y][x] }\n      }\n    }\n    \n    // メタデータをコピー\n    this.mapData.config.name = oldData.config.name\n    this.mapData.config.description = oldData.config.description\n    this.mapData.config.difficulty = oldData.config.difficulty\n    \n    // エディターを再構築\n    this.createGrid()\n    this.createCells()\n    this.updateVisualCells()\n    \n    console.log(`📐 Map resized to ${width}x${height}`)\n  }\n  \n  private setupEventListeners(): void {\n    // グローバルなドラッグ終了の検出\n    document.addEventListener('pointerup', () => {\n      this.editorState.isDrawing = false\n    })\n  }\n  \n  // ゲッター\n  public getMapData(): MapData {\n    return this.mapData\n  }\n  \n  public getContainer(): Container {\n    return this.container\n  }\n  \n  public getEditorState(): EditorState {\n    return { ...this.editorState }\n  }\n  \n  public getCurrentTool(): EditorTool {\n    return this.editorState.currentTool\n  }\n  \n  // セッター\n  public setMapData(mapData: MapData): void {\n    this.mapData = mapData\n    this.createGrid()\n    this.createCells()\n    this.updateVisualCells()\n  }\n  \n  public destroy(): void {\n    // イベントリスナーの削除\n    document.removeEventListener('pointerup', () => {\n      this.editorState.isDrawing = false\n    })\n    \n    // グラフィックスの破棄\n    this.cellGraphics.forEach(row => {\n      row.forEach(cellGfx => cellGfx.destroy())\n    })\n    \n    if (this.gridGraphics) {\n      this.gridGraphics.destroy()\n    }\n    \n    this.container.destroy()\n    \n    console.log('🗑️ Map Editor destroyed')\n  }\n}
+      const prevCell = this.mapData.cells[this.lastHoveredCell.y][this.lastHoveredCell.x]
+      this.updateCellVisual(this.lastHoveredCell.x, this.lastHoveredCell.y, prevCell)
+    }
+    
+    // 新しいホバー効果
+    const cellGfx = this.cellGraphics[y][x]
+    const { cellSize } = this.mapData.config
+    
+    // ホバー時のハイライト
+    const highlight = new Graphics()
+    highlight.lineStyle(3, 0xFFFFFF, 0.8)
+    highlight.drawRect(-1, -1, cellSize + 2, cellSize + 2)
+    cellGfx.addChild(highlight)
+    
+    // 0.1秒後にハイライトを削除
+    setTimeout(() => {
+      if (highlight.parent) {
+        highlight.parent.removeChild(highlight)
+        highlight.destroy()
+      }
+    }, 100)
+  }
+  
+  private applyTool(x: number, y: number): void {
+    if (x < 0 || x >= this.mapData.config.width || y < 0 || y >= this.mapData.config.height) {
+      return
+    }
+    
+    const cell = this.mapData.cells[y][x]
+    let newType: CellType = cell.type
+    
+    switch (this.editorState.currentTool) {
+      case 'path':
+        newType = 'path'
+        cell.pathIndex = this.pathIndex++
+        break
+      case 'tower_zone':
+        newType = 'tower_zone'
+        break
+      case 'obstacle':
+        newType = 'obstacle'
+        break
+      case 'start':
+        // 既存のスタート地点をクリア
+        this.clearCellType('start')
+        newType = 'start'
+        this.mapData.startPosition = { x, y }
+        break
+      case 'end':
+        // 既存のエンド地点をクリア
+        this.clearCellType('end')
+        newType = 'end'
+        this.mapData.endPosition = { x, y }
+        break
+      case 'eraser':
+        newType = 'empty'
+        delete cell.pathIndex
+        break
+    }
+    
+    if (cell.type !== newType) {
+      cell.type = newType
+      this.updateCellVisual(x, y, cell)
+      
+      // マップの更新時刻を記録
+      this.mapData.config.updatedAt = Date.now()
+    }
+  }
+  
+  private clearCellType(type: CellType): void {
+    const { config, cells } = this.mapData
+    
+    for (let y = 0; y < config.height; y++) {
+      for (let x = 0; x < config.width; x++) {
+        if (cells[y][x].type === type) {
+          cells[y][x].type = 'empty'
+          this.updateCellVisual(x, y, cells[y][x])
+        }
+      }
+    }
+  }
+  
+  private updatePathPoints(): void {
+    const pathCells: { x: number, y: number, index: number }[] = []
+    const { config, cells } = this.mapData
+    
+    // パスセルを収集
+    for (let y = 0; y < config.height; y++) {
+      for (let x = 0; x < config.width; x++) {
+        const cell = cells[y][x]
+        if ((cell.type === 'path' || cell.type === 'start' || cell.type === 'end') && 
+            cell.pathIndex !== undefined) {
+          pathCells.push({ x, y, index: cell.pathIndex })
+        }
+      }
+    }
+    
+    // インデックス順でソート
+    pathCells.sort((a, b) => a.index - b.index)
+    
+    // パスポイントを更新
+    this.mapData.pathPoints = pathCells.map(cell => {
+      const worldPos = MapDataUtils.cellToWorld(cell.x, cell.y, config.cellSize)
+      return {
+        x: worldPos.x,
+        y: worldPos.y,
+        cellX: cell.x,
+        cellY: cell.y
+      }
+    })
+    
+    console.log(`🛤️ Path updated: ${this.mapData.pathPoints.length} points`)
+  }
+  
+  // エディター制御メソッド
+  public setTool(tool: EditorTool): void {
+    this.editorState.currentTool = tool
+    console.log(`🔧 Tool changed to: ${tool}`)
+  }
+  
+  public toggleGrid(): void {
+    this.editorState.gridVisible = !this.editorState.gridVisible
+    this.gridContainer.visible = this.editorState.gridVisible
+    console.log(`🔲 Grid ${this.editorState.gridVisible ? 'shown' : 'hidden'}`)
+  }
+  
+  public togglePreviewMode(): void {
+    this.editorState.previewMode = !this.editorState.previewMode
+    
+    if (this.editorState.previewMode) {
+      // プレビューモード：エディット機能を無効化
+      this.cellContainer.eventMode = 'none'
+      console.log('👁️ Preview mode enabled')
+    } else {
+      // エディットモード：エディット機能を有効化
+      this.cellContainer.eventMode = 'auto'
+      console.log('✏️ Edit mode enabled')
+    }
+  }
+  
+  public clearMap(): void {
+    const { config, cells } = this.mapData
+    
+    for (let y = 0; y < config.height; y++) {
+      for (let x = 0; x < config.width; x++) {
+        cells[y][x].type = 'empty'
+        delete cells[y][x].pathIndex
+        this.updateCellVisual(x, y, cells[y][x])
+      }
+    }
+    
+    this.mapData.pathPoints = []
+    this.mapData.towerZones = []
+    this.pathIndex = 0
+    
+    console.log('🗑️ Map cleared')
+  }
+  
+  public generateAutoPath(): void {
+    this.clearMap()
+    
+    // 自動パス生成
+    this.mapData.pathPoints = MapDataUtils.generateStraightPath(this.mapData)
+    this.updateVisualCells()
+    
+    console.log('🤖 Auto path generated')
+  }
+  
+  public generateTowerZones(): void {
+    // 既存のタワーゾーンをクリア
+    const { config, cells } = this.mapData
+    for (let y = 0; y < config.height; y++) {
+      for (let x = 0; x < config.width; x++) {
+        if (cells[y][x].type === 'tower_zone') {
+          cells[y][x].type = 'empty'
+        }
+      }
+    }
+    
+    // 自動タワーゾーン生成
+    MapDataUtils.generateTowerZones(this.mapData)
+    this.updateVisualCells()
+    
+    console.log(`🏗️ Generated ${this.mapData.towerZones.length} tower zones`)
+  }
+  
+  public validateMap(): { valid: boolean, issues: string[] } {
+    const validation = MapDataUtils.validateMapData(this.mapData)
+    
+    console.log('✅ Map validation:')
+    console.log(`  Valid: ${validation.valid}`)
+    if (validation.issues.length > 0) {
+      console.log('  Issues:')
+      validation.issues.forEach(issue => console.log(`    - ${issue}`))
+    }
+    
+    return validation
+  }
+  
+  public exportMap(): string {
+    try {
+      const json = MapDataUtils.toJSON(this.mapData)
+      console.log('📁 Map exported to JSON')
+      return json
+    } catch (error) {
+      console.error('❌ Export failed:', error)
+      throw error
+    }
+  }
+  
+  public importMap(json: string): void {
+    try {
+      const newMapData = MapDataUtils.fromJSON(json)
+      this.mapData = newMapData
+      
+      // エディターを再構築
+      this.createGrid()
+      this.createCells()
+      this.updateVisualCells()
+      
+      console.log('📁 Map imported successfully')
+      console.log(`  Name: ${this.mapData.config.name}`)
+      console.log(`  Size: ${this.mapData.config.width}x${this.mapData.config.height}`)
+    } catch (error) {
+      console.error('❌ Import failed:', error)
+      throw error
+    }
+  }
+  
+  public resizeMap(width: number, height: number): void {
+    const oldData = this.mapData
+    this.mapData = MapDataUtils.createEmptyMap(width, height, oldData.config.cellSize)
+    
+    // 既存データを可能な限りコピー
+    const minWidth = Math.min(width, oldData.config.width)
+    const minHeight = Math.min(height, oldData.config.height)
+    
+    for (let y = 0; y < minHeight; y++) {
+      for (let x = 0; x < minWidth; x++) {
+        this.mapData.cells[y][x] = { ...oldData.cells[y][x] }
+      }
+    }
+    
+    // メタデータをコピー
+    this.mapData.config.name = oldData.config.name
+    this.mapData.config.description = oldData.config.description
+    this.mapData.config.difficulty = oldData.config.difficulty
+    
+    // エディターを再構築
+    this.createGrid()
+    this.createCells()
+    this.updateVisualCells()
+    
+    console.log(`📐 Map resized to ${width}x${height}`)
+  }
+  
+  private setupEventListeners(): void {
+    // グローバルなドラッグ終了の検出
+    document.addEventListener('pointerup', () => {
+      this.editorState.isDrawing = false
+    })
+  }
+  
+  // ゲッター
+  public getMapData(): MapData {
+    return this.mapData
+  }
+  
+  public getContainer(): Container {
+    return this.container
+  }
+  
+  public getEditorState(): EditorState {
+    return { ...this.editorState }
+  }
+  
+  public getCurrentTool(): EditorTool {
+    return this.editorState.currentTool
+  }
+  
+  // セッター
+  public setMapData(mapData: MapData): void {
+    this.mapData = mapData
+    this.createGrid()
+    this.createCells()
+    this.updateVisualCells()
+  }
+  
+  public destroy(): void {
+    // イベントリスナーの削除
+    document.removeEventListener('pointerup', () => {
+      this.editorState.isDrawing = false
+    })
+    
+    // グラフィックスの破棄
+    this.cellGraphics.forEach(row => {
+      row.forEach(cellGfx => cellGfx.destroy())
+    })
+    
+    if (this.gridGraphics) {
+      this.gridGraphics.destroy()
+    }
+    
+    this.container.destroy()
+    
+    console.log('🗑️ Map Editor destroyed')
+  }
+}

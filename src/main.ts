@@ -1,6 +1,7 @@
 import { Application } from 'pixi.js'
 import { Game } from '@/game/Game'
 import '@/ui/debug-ui.css'
+import '@/ui/player-ui.css'
 
 // PixiJSアプリケーションの初期化
 const app = new Application({

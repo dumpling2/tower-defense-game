@@ -15,6 +15,9 @@ import { MapEditorUI } from '@/ui/MapEditorUI'
 import { MapEditor } from '@/map/MapEditor'
 import { MapDataUtils } from '@/map/MapData'
 import { Entity } from '@/entities/Entity'
+import { GameHUD } from '@/ui/GameHUD'
+import { TowerPurchaseUI } from '@/ui/TowerPurchaseUI'
+import { PlayerUI } from '@/ui/PlayerUI'
 
 export class Game implements TowerUpgradeListener {
   private app: Application
@@ -31,6 +34,11 @@ export class Game implements TowerUpgradeListener {
   private mapEditor: MapEditor
   private mapEditorUI: MapEditorUI
   private particleContainer: Container
+  
+  // プレイヤー用UI
+  private gameHUD: GameHUD | null = null
+  private towerPurchaseUI: TowerPurchaseUI | null = null
+  private playerUI: PlayerUI | null = null
   
   private lastTime = 0
   private isRunning = false
@@ -72,7 +80,31 @@ export class Game implements TowerUpgradeListener {
     // デバッグUIの初期化
     this.debugUI = new DebugUIManager(this)
     
+    // プレイヤー用UIの初期化
+    this.initializePlayerUI()
+    
     this.setupGameLoop()
+  }
+
+  private initializePlayerUI(): void {
+    // GameHUD（上部の基本情報）
+    this.gameHUD = new GameHUD(
+      this.gameState,
+      this.gameSystem.getWaveSystem(),
+      this.economySystem
+    )
+    
+    // TowerPurchaseUI（左側のタワー購入）
+    this.towerPurchaseUI = new TowerPurchaseUI(
+      this.gameState,
+      this.gameSystem
+    )
+    
+    // PlayerUI（右側のゲーム制御）
+    this.playerUI = new PlayerUI(
+      this,
+      this.gameSystem.getWaveSystem()
+    )
   }
 
   public start(): void {
@@ -98,12 +130,28 @@ export class Game implements TowerUpgradeListener {
 
   public destroy(): void {
     this.stop()
+    
+    // UIのクリーンアップ
     if (this.debugUI) {
       this.debugUI.destroy()
     }
+    if (this.gameHUD) {
+      this.gameHUD.destroy()
+      this.gameHUD = null
+    }
+    if (this.towerPurchaseUI) {
+      this.towerPurchaseUI.destroy()
+      this.towerPurchaseUI = null
+    }
+    if (this.playerUI) {
+      this.playerUI.destroy()
+      this.playerUI = null
+    }
+    
     if (this.renderSystem) {
       this.renderSystem.destroy()
     }
+    
     console.log('🗑️ Game destroyed!')
   }
 
@@ -178,6 +226,10 @@ export class Game implements TowerUpgradeListener {
   }
 
   // ゲーム状態アクセサ
+  public getApp(): Application {
+    return this.app
+  }
+
   public getGameState(): GameState {
     return this.gameState
   }
@@ -606,7 +658,7 @@ export class Game implements TowerUpgradeListener {
     console.log('🏭 Available Investments:')
     investments.forEach(inv => {
       const costStr = Object.entries(inv.cost)
-        .filter(([_, amount]) => amount && amount > 0)
+        .filter(([, amount]) => amount && amount > 0)
         .map(([type, amount]) => `${amount} ${type}`)
         .join(', ')
       
@@ -620,7 +672,7 @@ export class Game implements TowerUpgradeListener {
     console.log('⬆️ Available Upgrades:')
     upgrades.forEach(upgrade => {
       const costStr = Object.entries(upgrade.cost)
-        .filter(([_, amount]) => amount && amount > 0)
+        .filter(([, amount]) => amount && amount > 0)
         .map(([type, amount]) => `${amount} ${type}`)
         .join(', ')
       
@@ -693,12 +745,19 @@ export class Game implements TowerUpgradeListener {
   public exportCurrentMapState(): void {
     try {
       // 現在のゲーム状態をマップデータとして出力
-      const currentPath = this.gameSystem.getWaveSystem().getEnemyPath()
+      const waveSystem = this.gameSystem.getWaveSystem()
+      const enemyPath = waveSystem.getEnemyPath()
       const mapData = MapDataUtils.createEmptyMap(20, 15, 32)
       
       mapData.config.name = 'Current Game State'
       mapData.config.description = 'Exported from current game session'
-      mapData.pathPoints = currentPath
+      // パスポイントを変換
+      mapData.pathPoints = enemyPath.map((point) => ({
+        x: point.x,
+        y: point.y,
+        cellX: Math.floor(point.x / 32),
+        cellY: Math.floor(point.y / 32)
+      }))
       mapData.economySettings.startingMoney = this.gameState.getMoney()
       
       const json = MapDataUtils.toJSON(mapData)

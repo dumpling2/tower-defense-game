@@ -158,7 +158,7 @@ export class BatchRenderer {
       }
 
       // Renderableコンポーネントの参照を更新
-      ;(renderable as any).displayObject = sprite
+      (renderable as any).displayObject = sprite
       ;(renderable as any).type = 'sprite'
 
       // 古いGraphicsを破棄

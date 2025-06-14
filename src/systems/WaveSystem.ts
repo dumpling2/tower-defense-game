@@ -78,6 +78,10 @@ export class WaveSystem {
     this.enemyPath = path
   }
 
+  public getEnemyPath(): { x: number; y: number }[] {
+    return this.enemyPath
+  }
+
   public update(deltaTime: number): void {
     void deltaTime // 未使用パラメータ警告回避
     const currentTime = Date.now()
