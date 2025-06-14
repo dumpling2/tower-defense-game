@@ -84,3 +84,10 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+
+# Screenshots
+screenshots/
+
+# Claude configuration
+.claude/
+CLAUDE.md

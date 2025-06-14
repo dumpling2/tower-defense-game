@@ -5,6 +5,12 @@ import { PathFollower } from '@/entities/components/PathFollower'
 import { MissileController } from '@/entities/components/MissileController'
 
 export class PhysicsSystem {
+  private onEnemyReachedGoal?: (entity: Entity) => void
+
+  constructor(onEnemyReachedGoal?: (entity: Entity) => void) {
+    this.onEnemyReachedGoal = onEnemyReachedGoal
+  }
+
   public update(deltaTime: number, entities: Entity[]): void {
     for (const entity of entities) {
       if (!entity.isEntityActive()) continue
@@ -55,6 +61,9 @@ export class PhysicsSystem {
     const pathFollower = entity.getComponent<PathFollower>('pathFollower')
     if (pathFollower && pathFollower.isComplete) {
       // 敵がゴールに到達した場合の処理
+      if (entity.type === 'enemy' && this.onEnemyReachedGoal) {
+        this.onEnemyReachedGoal(entity)
+      }
       entity.setActive(false)
     }
   }

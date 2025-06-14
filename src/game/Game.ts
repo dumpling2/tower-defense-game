@@ -55,7 +55,7 @@ export class Game implements TowerUpgradeListener {
     
     // システムの初期化（パフォーマンス最適化対応）
     this.renderSystem = new RenderSystem(app.stage, app)
-    this.physicsSystem = new PhysicsSystem()
+    this.physicsSystem = new PhysicsSystem((enemy) => this.onEnemyReachedGoal(enemy))
     this.inputSystem = new InputSystem(app.view as HTMLCanvasElement)
     
     // InputSystemをGameSystemに渡してタワー選択機能を有効化
@@ -167,6 +167,16 @@ export class Game implements TowerUpgradeListener {
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1) // 最大0.1秒に制限
     this.lastTime = currentTime
 
+    // ゲーム状態チェック
+    const gameState = this.gameState.getState()
+    if (gameState === 'gameOver') {
+      this.handleGameOver()
+      return
+    } else if (gameState !== 'playing') {
+      // playing状態でない場合は更新をスキップ
+      return
+    }
+
     // システム更新（順序重要）
     this.inputSystem.update()
     this.economySystem.update(deltaTime)
@@ -183,6 +193,9 @@ export class Game implements TowerUpgradeListener {
 
   private initializeGame(): void {
     console.log('🎯 Initializing tower defense game...')
+    
+    // ゲーム状態を playing に設定
+    this.gameState.setState('playing')
     
     // サンプルパスの定義（左から右への直線）
     const samplePath = [
@@ -832,5 +845,152 @@ export class Game implements TowerUpgradeListener {
     // プレビュー情報
     const preview = MapDataUtils.generatePreview(mapData)
     console.log('  Map preview:', preview)
+  }
+
+  // ゲームオーバー処理
+  private handleGameOver(): void {
+    console.log('💀 GAME OVER - Processing end game...')
+    
+    // ゲームオーバー画面を表示（将来実装）
+    this.showGameOverMessage()
+    
+    // ゲームを停止はしない（観察可能にするため）
+    // this.stop()
+  }
+
+  private showGameOverMessage(): void {
+    // 画面中央にゲームオーバーメッセージを表示
+    const gameOverHTML = `
+      <div id="game-over-overlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <div style="
+          background: linear-gradient(135deg, #2d1b69, #11001c);
+          border: 2px solid #ff4757;
+          border-radius: 16px;
+          padding: 40px;
+          text-align: center;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+          animation: gameOverPulse 1s ease-in-out infinite alternate;
+        ">
+          <h1 style="
+            color: #ff4757;
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+          ">💀 GAME OVER</h1>
+          <p style="
+            color: #ffffff;
+            font-size: 18px;
+            margin: 0 0 30px 0;
+          ">全てのライフを失いました</p>
+          <div style="
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+          ">
+            <button id="restart-btn" style="
+              background: linear-gradient(135deg, #2ecc71, #27ae60);
+              border: none;
+              color: white;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            ">🔄 再スタート</button>
+            <button id="close-game-over-btn" style="
+              background: linear-gradient(135deg, #3498db, #2980b9);
+              border: none;
+              color: white;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            ">📊 結果を見る</button>
+          </div>
+        </div>
+      </div>
+      <style>
+        @keyframes gameOverPulse {
+          from { transform: scale(1); }
+          to { transform: scale(1.05); }
+        }
+      </style>
+    `
+    
+    const existingOverlay = document.getElementById('game-over-overlay')
+    if (existingOverlay) {
+      existingOverlay.remove()
+    }
+    
+    const overlayContainer = document.createElement('div')
+    overlayContainer.innerHTML = gameOverHTML
+    document.body.appendChild(overlayContainer)
+    
+    // イベントリスナーを追加
+    const restartBtn = document.getElementById('restart-btn')
+    const closeBtn = document.getElementById('close-game-over-btn')
+    
+    restartBtn?.addEventListener('click', () => {
+      this.restartGame()
+    })
+    
+    closeBtn?.addEventListener('click', () => {
+      const overlay = document.getElementById('game-over-overlay')
+      overlay?.remove()
+    })
+  }
+
+  private restartGame(): void {
+    // ゲームオーバー画面を閉じる
+    const overlay = document.getElementById('game-over-overlay')
+    overlay?.remove()
+    
+    // ゲーム状態をリセット
+    this.gameState.reset()
+    this.gameState.setState('playing')
+    
+    // エンティティをクリア
+    this.entityManager.clear()
+    
+    // ゲームを再初期化
+    this.initializeGame()
+    
+    console.log('🔄 Game restarted!')
+  }
+
+  // 敵がゴールに到達した際の処理
+  private onEnemyReachedGoal(enemy: Entity): void {
+    // ライフを1減らす
+    this.gameState.loseLife()
+    
+    // 敵タイプに応じたライフダメージを実装したい場合は、ここで設定
+    // const enemyType = enemy.getComponent('enemyType')
+    // if (enemyType?.type === 'boss') {
+    //   this.gameState.loseLife() // ボスはライフ2減らす等
+    // }
+    
+    const remainingLives = this.gameState.getLives()
+    console.log(`💀 Enemy reached goal! Lives remaining: ${remainingLives}`)
+    
+    // ライフが0になった場合の追加処理
+    if (remainingLives === 0) {
+      console.log('💀 GAME OVER - All lives lost!')
+      // ゲームオーバー処理は自動的にゲームループで処理される
+    } else if (remainingLives <= 5) {
+      console.warn('⚠️ WARNING: Low lives remaining!')
+    }
   }
 }
