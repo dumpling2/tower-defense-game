@@ -121,25 +121,6 @@ export class EconomyUI {
         </div>
       </div>
 
-      <!-- フローティング通貨表示 -->
-      <div id="floating-currency" class="floating-currency">
-        <div class="floating-currency-item">
-          <span class="currency-icon">🪙</span>
-          <span id="floating-gold" class="currency-value">0</span>
-        </div>
-        <div class="floating-currency-item">
-          <span class="currency-icon">💎</span>
-          <span id="floating-crystal" class="currency-value">0</span>
-        </div>
-        <div class="floating-currency-item">
-          <span class="currency-icon">🔬</span>
-          <span id="floating-research" class="currency-value">0</span>
-        </div>
-        <div class="floating-currency-item">
-          <span class="currency-icon">⚡</span>
-          <span id="floating-energy" class="currency-value">0</span>
-        </div>
-      </div>
     `
 
     // CSSスタイルを追加
@@ -467,38 +448,6 @@ export class EconomyUI {
         color: #00ff88;
       }
 
-      .floating-currency {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        display: flex;
-        gap: 12px;
-        z-index: 1001;
-        pointer-events: none;
-      }
-
-      .floating-currency-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        background: rgba(15, 20, 30, 0.9);
-        border: 1px solid rgba(255, 215, 0, 0.6);
-        border-radius: 6px;
-        padding: 6px 8px;
-        backdrop-filter: blur(10px);
-      }
-
-      .floating-currency-item .currency-icon {
-        font-size: 14px;
-      }
-
-      .floating-currency-item .currency-value {
-        font-weight: 600;
-        color: #e8f4f8;
-        font-size: 12px;
-        min-width: 40px;
-        text-align: right;
-      }
 
       /* スクロールバーのスタイリング */
       .economy-content::-webkit-scrollbar {
@@ -583,7 +532,6 @@ export class EconomyUI {
     this.updateMultipliers()
     this.updateInvestments()
     this.updateUpgrades()
-    this.updateFloatingCurrency()
   }
 
   private updateCurrencies(): void {
@@ -661,14 +609,6 @@ export class EconomyUI {
     }
   }
 
-  private updateFloatingCurrency(): void {
-    const currencies = this.economySystem.getAllCurrencies()
-
-    this.updateElement('floating-gold', currencies.gold.toLocaleString())
-    this.updateElement('floating-crystal', currencies.crystal.toLocaleString())
-    this.updateElement('floating-research', currencies.research.toLocaleString())
-    this.updateElement('floating-energy', currencies.energy.toLocaleString())
-  }
 
   private createInvestmentElement(investment: Investment): HTMLElement {
     const element = document.createElement('div')

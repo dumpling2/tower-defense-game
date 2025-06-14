@@ -22,10 +22,10 @@
 /* メインデバッグパネル */
 .debug-panel {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 90px;
+  right: 280px;
   width: 320px;
-  max-height: calc(100vh - 40px);
+  max-height: calc(100vh - 100px);
   background: var(--debug-bg-primary);
   border: 1px solid var(--debug-border);
   border-radius: var(--debug-radius);
@@ -33,7 +33,7 @@
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
   color: var(--debug-text-primary);
-  z-index: 10000;
+  z-index: 1000;
   transition: var(--debug-transition);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
