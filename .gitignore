@@ -91,3 +91,7 @@ screenshots/
 # Claude configuration
 .claude/
 CLAUDE.md
+
+# Development planning documents
+DEVELOPMENT_PLAN.md
+TODO_LIST.md
