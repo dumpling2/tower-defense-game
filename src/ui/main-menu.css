@@ -1,0 +1,309 @@
+/* メインメニューのスタイル */
+.main-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 50000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: auto;
+}
+
+.main-menu-overlay.fade-in {
+  opacity: 1;
+}
+
+.main-menu-overlay.fade-out {
+  opacity: 0;
+}
+
+.main-menu-background {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 背景アニメーション */
+.menu-bg-animation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floating-tower {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border-radius: 8px;
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+}
+
+.floating-tower::before {
+  content: '🏰';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+}
+
+.tower-1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.tower-2 {
+  top: 60%;
+  right: 15%;
+  animation-delay: 2s;
+  animation-duration: 8s;
+}
+
+.tower-3 {
+  bottom: 20%;
+  left: 20%;
+  animation-delay: 4s;
+  animation-duration: 10s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+  66% {
+    transform: translateY(10px) rotate(-3deg);
+  }
+}
+
+/* メインコンテンツ */
+.main-menu-content {
+  position: relative;
+  z-index: 50002;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+  pointer-events: auto;
+}
+
+/* ゲームタイトル */
+.game-title h1 {
+  font-size: 4rem;
+  color: #00aaff;
+  margin: 0 0 10px 0;
+  text-shadow: 0 0 30px rgba(0, 170, 255, 0.5);
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+.game-subtitle {
+  font-size: 1.2rem;
+  color: #ffffff;
+  margin: 0 0 50px 0;
+  opacity: 0.8;
+}
+
+@keyframes titleGlow {
+  from {
+    text-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+  }
+  to {
+    text-shadow: 0 0 40px rgba(0, 170, 255, 0.8);
+  }
+}
+
+/* メニューボタン */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 50px;
+  z-index: 50003;
+  position: relative;
+  pointer-events: auto;
+}
+
+.menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 15px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 250px;
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 50004;
+}
+
+.menu-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.menu-btn:hover::before {
+  left: 100%;
+}
+
+.menu-btn.primary {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+}
+
+.menu-btn.primary:hover {
+  background: linear-gradient(135deg, #27ae60, #229954);
+  box-shadow: 0 6px 25px rgba(46, 204, 113, 0.5);
+  transform: translateY(-2px);
+}
+
+.menu-btn.secondary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.menu-btn.secondary:hover {
+  background: linear-gradient(135deg, #2980b9, #21618c);
+  box-shadow: 0 6px 25px rgba(52, 152, 219, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  font-size: 1.3rem;
+}
+
+.btn-text {
+  font-size: 1rem;
+}
+
+/* チュートリアルボタンの特別スタイル */
+.menu-btn.tutorial {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  border-color: #f39c12;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-btn.tutorial::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.8s ease;
+}
+
+.menu-btn.tutorial:hover::before {
+  left: 100%;
+}
+
+.menu-btn.tutorial:hover {
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  box-shadow: 0 6px 25px rgba(243, 156, 18, 0.6);
+  transform: translateY(-2px);
+}
+
+/* ゲーム情報 */
+.game-info {
+  margin-bottom: 30px;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  max-width: 600px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  backdrop-filter: blur(10px);
+}
+
+.feature-icon {
+  font-size: 1.2rem;
+}
+
+/* バージョン情報 */
+.version-info {
+  color: #888;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .game-title h1 {
+    font-size: 2.5rem;
+  }
+  
+  .main-menu-content {
+    padding: 20px;
+  }
+  
+  .menu-btn {
+    min-width: 200px;
+    padding: 12px 30px;
+  }
+  
+  .feature-list {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-title h1 {
+    font-size: 2rem;
+  }
+  
+  .menu-btn {
+    min-width: 180px;
+    padding: 10px 25px;
+    font-size: 1rem;
+  }
+}

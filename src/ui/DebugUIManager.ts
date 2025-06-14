@@ -115,6 +115,10 @@ export class DebugUIManager {
           <div class="debug-section">
             <h4>🎮 ゲーム制御</h4>
             <div class="button-grid">
+              <button id="restart-game" class="debug-btn success">
+                <span class="btn-icon">🔄</span>
+                <span>ゲーム再スタート</span>
+              </button>
               <button id="toggle-pooling" class="debug-btn info">
                 <span class="btn-icon">🔧</span>
                 <span>プール切替</span>
@@ -452,6 +456,13 @@ export class DebugUIManager {
     })
 
     // ゲーム制御ボタン
+    document.getElementById('restart-game')?.addEventListener('click', () => {
+      this.executeCommand('restart', () => {
+        console.log('🔄 Restarting game via Debug UI...')
+        this.game.restartGame()
+      })
+    })
+
     document.getElementById('toggle-pooling')?.addEventListener('click', () => {
       this.executeCommand('pooling', () => this.game.togglePooling())
       this.updatePoolingStatus()

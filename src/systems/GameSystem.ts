@@ -26,6 +26,7 @@ export class GameSystem {
   private towerSelectionSystem: TowerSelectionSystem | null = null
   private lastPoolStatsTime = 0
   private lastCollisionStatsTime = 0
+  private tutorialNotifyCallback?: (action: string, data?: any) => void
 
   constructor(entityManager: EntityManager, gameState: GameState, particleContainer: any, inputSystem?: InputSystem) {
     this.entityManager = entityManager
@@ -205,6 +206,9 @@ export class GameSystem {
     
     const tower = this.entityFactory.createTower(x, y, type)
     console.log(`🏗️ Built ${type} tower at (${x}, ${y}) for ${config.cost} coins`)
+    
+    // チュートリアルに通知
+    this.notifyTutorial('tower-built', { tower, towerType: type, x, y, cost: config.cost })
     
     return tower
   }
@@ -432,5 +436,16 @@ export class GameSystem {
 
   public getTowerSelectionSystem(): TowerSelectionSystem | null {
     return this.towerSelectionSystem
+  }
+
+  // チュートリアル通知設定
+  public setTutorialNotifyCallback(callback: (action: string, data?: any) => void): void {
+    this.tutorialNotifyCallback = callback
+  }
+
+  private notifyTutorial(action: string, data?: any): void {
+    if (this.tutorialNotifyCallback) {
+      this.tutorialNotifyCallback(action, data)
+    }
   }
 }

@@ -24,6 +24,7 @@
   display: flex;
   gap: 20px;
   align-items: center;
+  pointer-events: auto;
 }
 
 .hud-item {
@@ -34,6 +35,7 @@
   padding: 6px 12px;
   border-radius: 20px;
   transition: all 0.3s ease;
+  pointer-events: auto;
 }
 
 .hud-item:hover {
@@ -78,13 +80,14 @@
   padding: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   z-index: 1500;
-  pointer-events: auto;
+  pointer-events: auto !important;
   user-select: none;
 }
 
 .purchase-header {
   text-align: center;
   margin-bottom: 16px;
+  pointer-events: auto;
 }
 
 .purchase-header h3 {
@@ -97,6 +100,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  pointer-events: auto;
 }
 
 .tower-card {
@@ -134,10 +138,12 @@
   font-size: 32px;
   width: 48px;
   text-align: center;
+  pointer-events: auto;
 }
 
 .tower-info {
   flex: 1;
+  pointer-events: auto;
 }
 
 .tower-name {
@@ -183,8 +189,9 @@
   padding: 4px 12px;
   font-size: 12px;
   cursor: pointer;
-  pointer-events: auto;
+  pointer-events: auto !important;
   transition: all 0.2s ease;
+  z-index: 1600;
 }
 
 .purchase-btn:hover:not(:disabled) {
@@ -203,6 +210,7 @@
   margin-top: 12px;
   color: #a0b3cc;
   font-size: 12px;
+  pointer-events: auto;
 }
 
 /* プレイヤー制御パネル - 画面右側 */
@@ -216,12 +224,13 @@
   padding: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   z-index: 1500;
-  pointer-events: auto;
+  pointer-events: auto !important;
   user-select: none;
 }
 
 .control-section {
   margin-bottom: 16px;
+  pointer-events: auto;
 }
 
 .control-section:last-child {
@@ -234,12 +243,14 @@
   text-transform: uppercase;
   margin-bottom: 8px;
   text-align: center;
+  pointer-events: auto;
 }
 
 .speed-buttons {
   display: flex;
   gap: 4px;
   justify-content: center;
+  pointer-events: auto;
 }
 
 .control-btn {
@@ -250,12 +261,13 @@
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
-  pointer-events: auto;
+  pointer-events: auto !important;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  z-index: 1600;
 }
 
 .control-btn:hover:not(:disabled) {
@@ -278,10 +290,14 @@
 .pause-btn {
   width: 40px;
   padding: 8px;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .speed-btn {
   min-width: 36px;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .control-btn.primary {
@@ -312,6 +328,7 @@
 
 .btn-icon {
   font-size: 18px;
+  pointer-events: auto;
 }
 
 .wave-timer {
@@ -320,6 +337,7 @@
   padding: 8px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
+  pointer-events: auto;
 }
 
 .wave-timer.hidden {
@@ -343,12 +361,15 @@
   padding: 8px;
   margin: 0 auto;
   display: block;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .shortcuts-hint {
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: auto;
 }
 
 .shortcut {
@@ -358,6 +379,7 @@
   margin-bottom: 6px;
   font-size: 11px;
   color: #a0b3cc;
+  pointer-events: auto;
 }
 
 .shortcut kbd {

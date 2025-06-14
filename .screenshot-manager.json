@@ -1,0 +1,23 @@
+{
+  "project": {
+    "name": "Tower Defense",
+    "port": 3000,
+    "framework": "React"
+  },
+  "screenshot": {
+    "output_dir": "/home/mikanu/便利アプリ/tower defense/screenshots",
+    "capture_on_startup": true,
+    "capture_interval": 300,
+    "enabled_ports": [3000],
+    "viewports": {
+      "desktop": {
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  "filters": {
+    "port_whitelist": [3000],
+    "port_blacklist": [3001, 5173, 8000, 8001, 8080]
+  }
+}

@@ -8,6 +8,7 @@ import { InputSystem } from '@/systems/InputSystem'
 import { GameSystem } from '@/systems/GameSystem'
 import { Transform } from '@/entities/components/Transform'
 import { Renderable } from '@/entities/components/Renderable'
+import { Tower } from '@/entities/components/Tower'
 import { DebugUIManager } from '@/ui/DebugUIManager'
 import { TowerUpgradeUI, TowerUpgradeListener } from '@/ui/TowerUpgradeUI'
 import { EconomyUI } from '@/ui/EconomyUI'
@@ -18,6 +19,7 @@ import { Entity } from '@/entities/Entity'
 import { GameHUD } from '@/ui/GameHUD'
 import { TowerPurchaseUI } from '@/ui/TowerPurchaseUI'
 import { PlayerUI } from '@/ui/PlayerUI'
+import { TutorialSystem } from '@/ui/TutorialSystem'
 
 export class Game implements TowerUpgradeListener {
   private app: Application
@@ -39,9 +41,10 @@ export class Game implements TowerUpgradeListener {
   private gameHUD: GameHUD | null = null
   private towerPurchaseUI: TowerPurchaseUI | null = null
   private playerUI: PlayerUI | null = null
+  private tutorialSystem: TutorialSystem | null = null
   
   private lastTime = 0
-  private isRunning = false
+  private running = false
   private gameOverShown = false
   private gameSpeed = 1.0
 
@@ -110,10 +113,23 @@ export class Game implements TowerUpgradeListener {
   }
 
   public start(): void {
-    if (this.isRunning) return
+    if (this.running) return
     
-    this.isRunning = true
+    console.log('🚀 Starting Game...')
+    this.running = true
     this.gameState.setState('playing')
+    
+    // InputSystemを有効化してメニューとの競合を防ぐ
+    this.inputSystem.setActive(true)
+    console.log('🎮 InputSystem activated for game')
+    
+    // チュートリアルシステムを初期化
+    this.initializeTutorial()
+    
+    // GameSystemにチュートリアル通知コールバックを設定
+    this.gameSystem.setTutorialNotifyCallback((action, data) => {
+      this.notifyTutorialAction(action, data)
+    })
     
     // 初期エンティティの作成
     this.initializeGame()
@@ -121,40 +137,70 @@ export class Game implements TowerUpgradeListener {
     // ゲームループ開始
     this.app.ticker.add(this.gameLoop, this)
     
-    console.log('🚀 Game started!')
+    console.log('✅ Game started successfully!')
   }
 
   public stop(): void {
-    this.isRunning = false
+    console.log('⏹️ Stopping Game...')
+    this.running = false
+    
+    // InputSystemを無効化してメニューとの競合を防ぐ
+    this.inputSystem.setActive(false)
+    console.log('🎮 InputSystem deactivated for menu')
+    
+    // ゲームループ停止
     this.app.ticker.remove(this.gameLoop, this)
-    console.log('⏹️ Game stopped!')
+    
+    console.log('✅ Game stopped successfully!')
   }
 
   public destroy(): void {
+    console.log('🗑️ Destroying game...')
+    
+    // ゲームループ停止
     this.stop()
     
+    // InputSystemの破棄（イベントリスナー削除）
+    try {
+      this.inputSystem.destroy()
+      console.log('✅ InputSystem destroyed')
+    } catch (error) {
+      console.error('❌ Error destroying InputSystem:', error)
+    }
+    
     // UIのクリーンアップ
-    if (this.debugUI) {
-      this.debugUI.destroy()
-    }
-    if (this.gameHUD) {
-      this.gameHUD.destroy()
-      this.gameHUD = null
-    }
-    if (this.towerPurchaseUI) {
-      this.towerPurchaseUI.destroy()
-      this.towerPurchaseUI = null
-    }
-    if (this.playerUI) {
-      this.playerUI.destroy()
-      this.playerUI = null
+    try {
+      if (this.debugUI) {
+        this.debugUI.destroy()
+      }
+      if (this.gameHUD) {
+        this.gameHUD.destroy()
+        this.gameHUD = null
+      }
+      if (this.towerPurchaseUI) {
+        this.towerPurchaseUI.destroy()
+        this.towerPurchaseUI = null
+      }
+      if (this.playerUI) {
+        this.playerUI.destroy()
+        this.playerUI = null
+      }
+      console.log('✅ UI systems destroyed')
+    } catch (error) {
+      console.error('❌ Error destroying UI systems:', error)
     }
     
-    if (this.renderSystem) {
-      this.renderSystem.destroy()
+    // レンダリングシステムの破棄
+    try {
+      if (this.renderSystem) {
+        this.renderSystem.destroy()
+      }
+      console.log('✅ Render system destroyed')
+    } catch (error) {
+      console.error('❌ Error destroying render system:', error)
     }
     
-    console.log('🗑️ Game destroyed!')
+    console.log('✅ Game destroyed successfully!')
   }
 
   private setupGameLoop(): void {
@@ -163,7 +209,7 @@ export class Game implements TowerUpgradeListener {
   }
 
   private gameLoop(): void {
-    if (!this.isRunning) return
+    if (!this.running) return
 
     const currentTime = Date.now()
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1) // 最大0.1秒に制限
@@ -223,6 +269,7 @@ export class Game implements TowerUpgradeListener {
     console.log('🏗️ Use the tower purchase panel on the left to build towers')
     console.log('🎯 Place towers strategically before starting the first wave')
     console.log('🎮 Use browser console commands:')
+    console.log('  game.restartGame() - Restart the game completely')
     console.log('  game.forceCreateMissile() - Create single missile for debugging')
     console.log('  game.testMassiveMissileBarrage(100) - Test 100 missiles')
     console.log('  game.showPoolStats() - Show pool statistics')
@@ -263,6 +310,14 @@ export class Game implements TowerUpgradeListener {
 
   public getEconomySystem(): EconomySystem {
     return this.economySystem
+  }
+  
+  public getInputSystem(): InputSystem {
+    return this.inputSystem
+  }
+  
+  public isRunning(): boolean {
+    return this.running
   }
 
   // ゲーム速度制御
@@ -642,6 +697,8 @@ export class Game implements TowerUpgradeListener {
     const success = this.gameSystem.upgradeTower(tower)
     if (success) {
       console.log('✅ Tower upgrade successful')
+      // チュートリアルに通知
+      this.notifyTutorialAction('tower-upgraded', { tower })
     } else {
       console.warn('❌ Tower upgrade failed')
     }
@@ -756,6 +813,105 @@ export class Game implements TowerUpgradeListener {
   public hideMapEditor(): void {
     this.mapEditorUI.hide()
     console.log('🗺️ Map Editor closed')
+  }
+
+  // TowerPurchaseUI デバッグ機能
+  public debugTowerPurchaseUI(): void {
+    console.log('🏗️ TowerPurchaseUI Debug:')
+    if (this.towerPurchaseUI) {
+      this.towerPurchaseUI.debugUIState()
+    } else {
+      console.error('❌ TowerPurchaseUI not initialized')
+    }
+  }
+
+  // UI要素のクリック可能性を包括的に診断
+  public diagnoseuClickability(): void {
+    console.log('🔍 === UI CLICKABILITY DIAGNOSIS ===')
+    
+    // キャンバス情報
+    const canvas = this.app.view as HTMLCanvasElement
+    console.log('📺 Canvas Settings:')
+    console.log(`  - Z-index: ${canvas.style.zIndex}`)
+    console.log(`  - Pointer events: ${canvas.style.pointerEvents}`)
+    console.log(`  - Position: ${canvas.style.position}`)
+    console.log(`  - Interactive: ${this.app.stage.interactive}`)
+    console.log(`  - Event mode: ${(this.app.stage as any).eventMode}`)
+    
+    // 各UI要素のチェック
+    const uiElements = [
+      { name: 'Game HUD', selector: '.game-hud' },
+      { name: 'Tower Purchase Panel', selector: '.tower-purchase-panel' },
+      { name: 'Player Control Panel', selector: '.player-control-panel' },
+      { name: 'Tower Purchase Buttons', selector: '.purchase-btn' },
+      { name: 'Control Buttons', selector: '.control-btn' },
+      { name: 'Debug Panel', selector: '.debug-panel' }
+    ]
+    
+    console.log('🎛️ UI Elements Check:')
+    uiElements.forEach(({ name, selector }) => {
+      const elements = document.querySelectorAll(selector)
+      console.log(`  ${name} (${selector}):`)
+      console.log(`    - Found: ${elements.length} elements`)
+      
+      elements.forEach((element, index) => {
+        const el = element as HTMLElement
+        const styles = window.getComputedStyle(el)
+        const rect = el.getBoundingClientRect()
+        
+        console.log(`    - Element ${index + 1}:`)
+        console.log(`      * Z-index: ${styles.zIndex}`)
+        console.log(`      * Pointer events: ${styles.pointerEvents}`)
+        console.log(`      * Display: ${styles.display}`)
+        console.log(`      * Visibility: ${styles.visibility}`)
+        console.log(`      * Position: ${rect.top}x${rect.left} (${rect.width}x${rect.height})`)
+        console.log(`      * Clickable: ${styles.pointerEvents !== 'none' && styles.display !== 'none'}`)
+        
+        // 要素がcanvasの上にあるかチェック
+        const canvasRect = canvas.getBoundingClientRect()
+        const overlapsCanvas = !(rect.right < canvasRect.left || 
+                                rect.left > canvasRect.right || 
+                                rect.bottom < canvasRect.top || 
+                                rect.top > canvasRect.bottom)
+        console.log(`      * Overlaps canvas: ${overlapsCanvas}`)
+      })
+    })
+    
+    // InputSystemの状態チェック
+    console.log('🎮 InputSystem Status:')
+    console.log(`  - Active: ${this.inputSystem ? 'Yes' : 'No'}`)
+    if (this.inputSystem) {
+      console.log(`  - Running: ${this.running}`)
+      console.log(`  - Game state: ${this.gameState.getState()}`)
+    }
+    
+    // イベントリスナーのチェック
+    console.log('📡 Event Listeners Check:')
+    const canvasElement = document.querySelector('canvas')
+    console.log(`  - Canvas click listeners: ${canvasElement ? 'Yes' : 'No'}`)
+    console.log(`  - Document click listeners: ${!!document.onclick}`)
+    
+    // メニューが非表示になっているかチェック
+    const mainMenu = document.getElementById('main-menu-overlay')
+    console.log('🏠 Main Menu Status:')
+    console.log(`  - Exists: ${!!mainMenu}`)
+    if (mainMenu) {
+      const styles = window.getComputedStyle(mainMenu)
+      console.log(`  - Display: ${styles.display}`)
+      console.log(`  - Z-index: ${styles.zIndex}`)
+      console.log(`  - Pointer events: ${styles.pointerEvents}`)
+    }
+    
+    console.log('=====================================')
+  }
+
+  public testTowerPurchaseButtons(): void {
+    console.log('🧪 Testing TowerPurchaseUI buttons:')
+    if (this.towerPurchaseUI) {
+      this.towerPurchaseUI.testButtonClicks()
+    } else {
+      console.error('❌ TowerPurchaseUI not initialized')
+    }
   }
 
   public getMapEditor(): MapEditor {
@@ -1020,16 +1176,15 @@ export class Game implements TowerUpgradeListener {
     // タワー統計を収集
     const towers = this.entityManager.getEntitiesByType('tower')
     const towerStats = towers.map(tower => {
-      const towerComponent = tower.getComponent('tower')
+      const towerComponent = tower.getComponent('tower') as Tower
       if (towerComponent) {
-        const stats = (towerComponent as any).getStats()
         return {
           type: tower.type || 'tower',
-          level: stats.level,
-          kills: stats.enemiesKilled,
-          damage: stats.totalDamage,
-          shots: stats.missilesFired,
-          efficiency: stats.missilesFired > 0 ? (stats.enemiesKilled / stats.missilesFired * 100).toFixed(1) : '0.0'
+          level: towerComponent.getLevel(),
+          kills: towerComponent.getTotalKills(),
+          damage: towerComponent.getTotalDamageDealt(),
+          shots: towerComponent.getTotalShotsFired(),
+          efficiency: towerComponent.getEfficiency().toFixed(1)
         }
       }
       return null
@@ -1161,7 +1316,9 @@ export class Game implements TowerUpgradeListener {
     })
   }
 
-  private restartGame(): void {
+  public restartGame(): void {
+    console.log('🔄 Restarting game...')
+    
     // ゲームオーバー画面を閉じる
     const overlay = document.getElementById('game-over-overlay')
     overlay?.remove()
@@ -1173,17 +1330,72 @@ export class Game implements TowerUpgradeListener {
     // ゲームオーバーフラグをリセット
     this.gameOverShown = false
     
-    // ゲーム状態をリセット
-    this.gameState.reset()
-    this.gameState.setState('playing')
+    // すべてのシステムをリセット
+    console.log('  Step 1/8: Resetting game state...')
     
-    // エンティティをクリア
+    // 1. ゲーム状態をリセット
+    this.gameState.reset()
+    
+    console.log('  Step 2/8: Resetting economy system...')
+    // 2. 経済システムをリセット
+    if (this.economySystem && typeof this.economySystem.reset === 'function') {
+      this.economySystem.reset()
+    }
+    
+    console.log('  Step 3/8: Clearing all entities...')
+    // 3. エンティティをクリア
     this.entityManager.clear()
+    
+    console.log('  Step 4/8: Resetting wave system...')
+    // 4. ウェーブシステムをリセット
+    const waveSystem = this.gameSystem.getWaveSystem()
+    if (waveSystem && typeof waveSystem.reset === 'function') {
+      waveSystem.reset()
+    }
+    
+    console.log('  Step 5/8: Clearing particle system...')
+    // 5. パーティクルシステムをクリア
+    const particleSystem = this.gameSystem.getParticleSystem()
+    if (particleSystem && typeof particleSystem.clear === 'function') {
+      particleSystem.clear()
+    }
+    
+    console.log('  Step 6/8: Clearing tower selection...')
+    // 6. タワー選択をクリア
+    try {
+      if (this.gameSystem && typeof (this.gameSystem as any).clearSelectedTower === 'function') {
+        (this.gameSystem as any).clearSelectedTower()
+      }
+    } catch (error) {
+      console.log('    Tower selection clear skipped (method not available)')
+    }
+    
+    console.log('  Step 7/8: Resetting UI elements...')
+    // 7. UI要素をリセット
+    try {
+      // タワーアップグレードUIを非表示
+      if (this.towerUpgradeUI && typeof (this.towerUpgradeUI as any).hideTowerInfo === 'function') {
+        (this.towerUpgradeUI as any).hideTowerInfo()
+      }
+    } catch (error) {
+      console.log('    Tower upgrade UI reset skipped')
+    }
+    
+    console.log('  Step 8/8: Updating economy display...')
+    // 8. エコノミーUIを更新
+    if (this.economyUI && typeof this.economyUI.updateDisplay === 'function') {
+      this.economyUI.updateDisplay()
+    }
+    
+    console.log('  All systems reset complete')
+    
+    // ゲーム状態を再設定
+    this.gameState.setState('playing')
     
     // ゲームを再初期化
     this.initializeGame()
     
-    console.log('🔄 Game restarted!')
+    console.log('✅ Game restarted successfully!')
   }
 
   // 敵がゴールに到達した際の処理
@@ -1206,6 +1418,118 @@ export class Game implements TowerUpgradeListener {
       // ゲームオーバー処理は自動的にゲームループで処理される
     } else if (remainingLives <= 5) {
       console.warn('⚠️ WARNING: Low lives remaining!')
+    }
+  }
+
+  // チュートリアルシステム関連メソッド
+  private initializeTutorial(): void {
+    if (!this.tutorialSystem) {
+      this.tutorialSystem = new TutorialSystem(this.gameState)
+      
+      // チュートリアル完了・スキップ時のコールバック設定
+      this.tutorialSystem.setOnComplete(() => {
+        console.log('🎓 Tutorial completed successfully!')
+        this.onTutorialComplete()
+      })
+      
+      this.tutorialSystem.setOnSkip(() => {
+        console.log('⏭️ Tutorial skipped by user')
+        this.onTutorialComplete()
+      })
+      
+      // チュートリアルUIイベントハンドラー設定
+      const tutorialUI = (this.tutorialSystem as any).tutorialUI
+      if (tutorialUI) {
+        tutorialUI.setEventHandlers({
+          onNext: () => this.tutorialSystem?.nextStep(),
+          onPrevious: () => this.tutorialSystem?.previousStep(),
+          onSkip: () => this.tutorialSystem?.skipTutorial(),
+          onClose: () => this.tutorialSystem?.skipTutorial()
+        })
+      }
+      
+      console.log('🎓 Tutorial system initialized')
+    }
+    
+    // 初回プレイヤーかチェック
+    if (this.tutorialSystem.isFirstTimePlayer()) {
+      console.log('👋 First-time player detected, starting tutorial...')
+      // 少し遅延してからチュートリアル開始（UI初期化完了を待つ）
+      setTimeout(() => {
+        this.tutorialSystem?.startTutorial()
+      }, 1500)
+    }
+  }
+
+  private onTutorialComplete(): void {
+    console.log('🎉 Tutorial system completed, game ready for play')
+    // チュートリアル完了後の処理（必要に応じて）
+  }
+
+  public startTutorial(): void {
+    if (!this.tutorialSystem) {
+      this.initializeTutorial()
+    }
+    this.tutorialSystem?.startTutorial()
+  }
+
+  public skipTutorial(): void {
+    this.tutorialSystem?.skipTutorial()
+  }
+
+  public resetTutorialProgress(): void {
+    this.tutorialSystem?.resetProgress()
+    console.log('🔄 Tutorial progress reset')
+  }
+
+  // チュートリアルアクション通知メソッド
+  public notifyTutorialAction(action: string, data?: any): void {
+    this.tutorialSystem?.notifyActionCompleted(action, data)
+  }
+
+  // デバッグ用チュートリアルコマンド
+  public testTutorialSystem(): void {
+    console.log('🧪 Testing Tutorial System...')
+    
+    if (!this.tutorialSystem) {
+      console.log('  Initializing tutorial system...')
+      this.initializeTutorial()
+    }
+    
+    console.log('  Tutorial System Status:')
+    console.log(`    Active: ${this.tutorialSystem?.isActiveStatus()}`)
+    console.log(`    Completed: ${this.tutorialSystem?.isCompletedStatus()}`)
+    console.log(`    Current Step: ${this.tutorialSystem?.getCurrentStepIndex()} / ${this.tutorialSystem?.getTotalSteps()}`)
+    console.log(`    First Time Player: ${this.tutorialSystem?.isFirstTimePlayer()}`)
+    
+    const currentStep = this.tutorialSystem?.getCurrentStep()
+    if (currentStep) {
+      console.log(`    Current Step Title: "${currentStep.title}"`)
+      console.log(`    Current Step Action: "${currentStep.action}"`)
+    }
+  }
+
+  public forceTutorialStep(stepIndex: number): void {
+    if (this.tutorialSystem) {
+      this.tutorialSystem.goToStep(stepIndex)
+      console.log(`🎯 Forced tutorial to step ${stepIndex}`)
+    } else {
+      console.warn('❌ Tutorial system not initialized')
+    }
+  }
+
+  public getTutorialStatus(): any {
+    if (!this.tutorialSystem) {
+      return { error: 'Tutorial system not initialized' }
+    }
+    
+    return {
+      active: this.tutorialSystem.isActiveStatus(),
+      completed: this.tutorialSystem.isCompletedStatus(),
+      currentStep: this.tutorialSystem.getCurrentStepIndex(),
+      totalSteps: this.tutorialSystem.getTotalSteps(),
+      firstTimePlayer: this.tutorialSystem.isFirstTimePlayer(),
+      currentStepData: this.tutorialSystem.getCurrentStep()
     }
   }
 }

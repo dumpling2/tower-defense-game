@@ -27,8 +27,12 @@ export class TowerPurchaseUI {
     this.gameState = gameState
     this.gameSystem = gameSystem
     this.createUI()
-    this.setupEventListeners()
-    this.startUpdating()
+    
+    // DOM要素が確実に作成された後にイベントリスナーを設定
+    setTimeout(() => {
+      this.setupEventListeners()
+      this.startUpdating()
+    }, 100)
   }
 
   private createUI(): void {
@@ -150,9 +154,22 @@ export class TowerPurchaseUI {
     // HTMLを追加
     const panelContainer = document.createElement('div')
     panelContainer.innerHTML = panelHTML
-    document.body.appendChild(panelContainer)
-
-    this.panel = document.getElementById('tower-purchase-panel')
+    
+    // 実際のパネル要素を取得
+    const panel = panelContainer.querySelector('#tower-purchase-panel') as HTMLElement
+    if (panel) {
+      // パネルを直接body に追加
+      document.body.appendChild(panel)
+      this.panel = panel
+      
+      // パネルが確実にクリック可能になるよう追加設定
+      panel.style.pointerEvents = 'auto'
+      panel.style.zIndex = '1500'
+      
+      console.log('✅ TowerPurchaseUI panel created and added to DOM')
+    } else {
+      console.error('❌ Failed to create TowerPurchaseUI panel')
+    }
   }
 
   private setupEventListeners(): void {
@@ -160,8 +177,24 @@ export class TowerPurchaseUI {
     const towerTypes: TowerType[] = ['basic', 'rapid', 'heavy', 'sniper', 'splash']
     
     towerTypes.forEach(type => {
-      const btn = document.getElementById(`purchase-${type}`)
-      btn?.addEventListener('click', () => this.startPlacementMode(type))
+      const btn = document.getElementById(`purchase-${type}`) as HTMLButtonElement
+      if (btn) {
+        // ボタンが確実にクリック可能になるよう設定
+        btn.style.pointerEvents = 'auto'
+        btn.style.cursor = 'pointer'
+        
+        // イベントリスナーを追加
+        btn.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          console.log(`🏗️ ${type} tower purchase button clicked`)
+          this.startPlacementMode(type)
+        })
+        
+        console.log(`✅ Event listener added for ${type} tower button`)
+      } else {
+        console.error(`❌ Button not found: purchase-${type}`)
+      }
     })
 
     // キャンセル用ESCキー
@@ -178,8 +211,15 @@ export class TowerPurchaseUI {
   }
 
   private startPlacementMode(towerType: TowerType): void {
+    console.log(`🎯 Starting placement mode for ${towerType} tower`)
+    
     const config = TOWER_CONFIGS[towerType]
-    if (this.gameState.getMoney() < config.cost) {
+    const currentMoney = this.gameState.getMoney()
+    
+    console.log(`💰 Current money: ${currentMoney}, Tower cost: ${config.cost}`)
+    
+    if (currentMoney < config.cost) {
+      console.log(`❌ Insufficient funds for ${towerType} tower`)
       this.showInsufficientFunds()
       return
     }
@@ -187,14 +227,19 @@ export class TowerPurchaseUI {
     this.placementMode.isActive = true
     this.placementMode.towerType = towerType
     
+    console.log(`✅ Placement mode activated for ${towerType}`)
+    
     // カーソルを変更
     document.body.style.cursor = 'crosshair'
+    console.log('🎯 Cursor changed to crosshair')
     
     // プレビュー要素を作成
     this.createPlacementPreview()
     
     // ボタンの状態を更新
     this.updateButtonStates()
+    
+    console.log(`🏗️ ${towerType} tower placement mode ready`)
   }
 
   private cancelPlacementMode(): void {
@@ -317,5 +362,60 @@ export class TowerPurchaseUI {
       this.panel.remove()
       this.panel = null
     }
+  }
+
+  // デバッグ用: UI要素の状態を確認
+  public debugUIState(): void {
+    console.log('🔍 TowerPurchaseUI Debug State:')
+    console.log('  Panel exists:', !!this.panel)
+    console.log('  Panel in DOM:', !!document.getElementById('tower-purchase-panel'))
+    
+    const towerTypes: TowerType[] = ['basic', 'rapid', 'heavy', 'sniper', 'splash']
+    towerTypes.forEach(type => {
+      const btn = document.getElementById(`purchase-${type}`)
+      console.log(`  ${type} button:`, {
+        exists: !!btn,
+        visible: btn ? window.getComputedStyle(btn).display : 'N/A',
+        clickable: btn ? window.getComputedStyle(btn).pointerEvents : 'N/A',
+        disabled: btn ? (btn as HTMLButtonElement).disabled : 'N/A'
+      })
+    })
+  }
+
+  // デバッグ用: ボタンクリックをテスト
+  public testButtonClicks(): void {
+    console.log('🧪 Testing TowerPurchaseUI button clicks...')
+    const towerTypes: TowerType[] = ['basic', 'rapid', 'heavy', 'sniper', 'splash']
+    
+    towerTypes.forEach(type => {
+      const btn = document.getElementById(`purchase-${type}`)
+      if (btn) {
+        console.log(`🔍 Testing ${type} button:`)
+        console.log(`  - Element found: ✅`)
+        console.log(`  - Display: ${window.getComputedStyle(btn).display}`)
+        console.log(`  - Visibility: ${window.getComputedStyle(btn).visibility}`)
+        console.log(`  - Pointer events: ${window.getComputedStyle(btn).pointerEvents}`)
+        console.log(`  - Z-index: ${window.getComputedStyle(btn).zIndex}`)
+        
+        // プログラム的クリック
+        console.log(`  - Triggering click...`)
+        btn.click()
+        
+        // 手動でイベントをディスパッチ
+        console.log(`  - Dispatching click event...`)
+        const clickEvent = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: true
+        })
+        btn.dispatchEvent(clickEvent)
+        
+        // 直接関数を呼び出し
+        console.log(`  - Direct function call...`)
+        this.startPlacementMode(type)
+      } else {
+        console.error(`❌ Button not found: purchase-${type}`)
+      }
+    })
   }
 }
