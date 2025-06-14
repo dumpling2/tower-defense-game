@@ -42,6 +42,7 @@ export class Game implements TowerUpgradeListener {
   
   private lastTime = 0
   private isRunning = false
+  private gameOverShown = false
 
   constructor(app: Application) {
     this.app = app
@@ -208,18 +209,13 @@ export class Game implements TowerUpgradeListener {
       { x: 1150, y: 400 }
     ]
 
-    // 異なるタワータイプを配置（複数タワーシステムのデモ）
-    this.gameSystem.createTower(300, 200, 'basic')     // ベーシックタワー
-    this.gameSystem.createTower(500, 500, 'rapid')     // ラピッドタワー
-    this.gameSystem.createTower(700, 200, 'heavy')     // ヘビータワー
-    this.gameSystem.createTower(900, 500, 'sniper')    // スナイパータワー
-    this.gameSystem.createTower(600, 350, 'splash')    // スプラッシュタワー
-
-    // ウェーブシステムを初期化（従来の敵生成を置き換え）
+    // ウェーブシステムを初期化
     this.setupWaveSystem(samplePath)
 
-    console.log('✅ Game initialized with towers and enemy spawn system')
-    console.log('🎯 Use browser console commands:')
+    console.log('✅ Game initialized - ready for tower placement!')
+    console.log('🏗️ Use the tower purchase panel on the left to build towers')
+    console.log('🎯 Place towers strategically before starting the first wave')
+    console.log('🎮 Use browser console commands:')
     console.log('  game.forceCreateMissile() - Create single missile for debugging')
     console.log('  game.testMassiveMissileBarrage(100) - Test 100 missiles')
     console.log('  game.showPoolStats() - Show pool statistics')
@@ -849,9 +845,14 @@ export class Game implements TowerUpgradeListener {
 
   // ゲームオーバー処理
   private handleGameOver(): void {
-    console.log('💀 GAME OVER - Processing end game...')
+    if (this.gameOverShown) {
+      return // 既に表示済みの場合は何もしない
+    }
     
-    // ゲームオーバー画面を表示（将来実装）
+    console.log('💀 GAME OVER - Processing end game...')
+    this.gameOverShown = true
+    
+    // ゲームオーバー画面を表示
     this.showGameOverMessage()
     
     // ゲームを停止はしない（観察可能にするため）
@@ -948,8 +949,165 @@ export class Game implements TowerUpgradeListener {
     })
     
     closeBtn?.addEventListener('click', () => {
-      const overlay = document.getElementById('game-over-overlay')
-      overlay?.remove()
+      this.showGameResults()
+    })
+  }
+
+  private showGameResults(): void {
+    // ゲームオーバー画面を閉じる
+    const overlay = document.getElementById('game-over-overlay')
+    overlay?.remove()
+    
+    // 統計情報を収集
+    const gameStats = {
+      waveReached: this.gameState.getWave(),
+      enemiesKilled: this.gameState.getEnemiesKilled(),
+      missileFired: this.gameState.getMissileFired(),
+      score: this.gameState.getScore(),
+      finalMoney: this.gameState.getMoney(),
+      accuracy: this.gameState.getMissileFired() > 0 
+        ? ((this.gameState.getEnemiesKilled() / this.gameState.getMissileFired()) * 100).toFixed(1)
+        : '0.0'
+    }
+    
+    // タワー統計を収集
+    const towers = this.entityManager.getEntitiesByType('tower')
+    const towerStats = towers.map(tower => {
+      const towerComponent = tower.getComponent('tower')
+      if (towerComponent) {
+        const stats = (towerComponent as any).getStats()
+        return {
+          type: tower.towerType || 'unknown',
+          level: stats.level,
+          kills: stats.enemiesKilled,
+          damage: stats.totalDamage,
+          shots: stats.missilesFired,
+          efficiency: stats.missilesFired > 0 ? (stats.enemiesKilled / stats.missilesFired * 100).toFixed(1) : '0.0'
+        }
+      }
+      return null
+    }).filter(Boolean)
+    
+    const resultsHTML = `
+      <div id="game-results-overlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        overflow-y: auto;
+      ">
+        <div style="
+          background: linear-gradient(135deg, #1a1a2e, #16213e);
+          border: 2px solid #0066cc;
+          border-radius: 16px;
+          padding: 30px;
+          max-width: 600px;
+          width: 90%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        ">
+          <h1 style="
+            color: #00aaff;
+            font-size: 32px;
+            margin: 0 0 20px 0;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+          ">📊 ゲーム結果</h1>
+          
+          <div style="color: white; margin-bottom: 20px;">
+            <h3 style="color: #ffd700; margin-bottom: 10px;">🎯 基本統計</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+              <div>🌊 到達ウェーブ: <strong>${gameStats.waveReached}</strong></div>
+              <div>💰 最終資金: <strong>${gameStats.finalMoney}</strong></div>
+              <div>💀 撃破数: <strong>${gameStats.enemiesKilled}</strong></div>
+              <div>🚀 発射数: <strong>${gameStats.missileFired}</strong></div>
+              <div>🎯 命中率: <strong>${gameStats.accuracy}%</strong></div>
+              <div>⭐ スコア: <strong>${gameStats.score}</strong></div>
+            </div>
+          </div>
+          
+          <div style="color: white; margin-bottom: 20px;">
+            <h3 style="color: #ffd700; margin-bottom: 10px;">🏗️ タワー統計</h3>
+            <div style="max-height: 200px; overflow-y: auto;">
+              ${towerStats.length > 0 ? towerStats.map((tower, index) => `
+                <div style="
+                  background: rgba(255, 255, 255, 0.1);
+                  padding: 10px;
+                  margin-bottom: 8px;
+                  border-radius: 8px;
+                  border-left: 4px solid #00aaff;
+                ">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>${tower.type} タワー #${index + 1}</strong>
+                    <span style="color: #00ff88;">Lv.${tower.level}</span>
+                  </div>
+                  <div style="font-size: 14px; margin-top: 5px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <span>撃破: ${tower.kills}</span>
+                    <span>ダメージ: ${Math.floor(tower.damage)}</span>
+                    <span>発射: ${tower.shots}</span>
+                    <span>効率: ${tower.efficiency}%</span>
+                  </div>
+                </div>
+              `).join('') : '<p style="text-align: center; color: #999;">タワーが配置されていませんでした</p>'}
+            </div>
+          </div>
+          
+          <div style="
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+          ">
+            <button id="restart-from-results-btn" style="
+              background: linear-gradient(135deg, #2ecc71, #27ae60);
+              border: none;
+              color: white;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            ">🔄 再スタート</button>
+            <button id="close-results-btn" style="
+              background: linear-gradient(135deg, #e74c3c, #c0392b);
+              border: none;
+              color: white;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            ">✕ 閉じる</button>
+          </div>
+        </div>
+      </div>
+    `
+    
+    const resultsContainer = document.createElement('div')
+    resultsContainer.innerHTML = resultsHTML
+    document.body.appendChild(resultsContainer)
+    
+    // イベントリスナーを追加
+    const restartBtn = document.getElementById('restart-from-results-btn')
+    const closeBtn = document.getElementById('close-results-btn')
+    
+    restartBtn?.addEventListener('click', () => {
+      const resultsOverlay = document.getElementById('game-results-overlay')
+      resultsOverlay?.remove()
+      this.restartGame()
+    })
+    
+    closeBtn?.addEventListener('click', () => {
+      const resultsOverlay = document.getElementById('game-results-overlay')
+      resultsOverlay?.remove()
     })
   }
 
@@ -957,6 +1115,13 @@ export class Game implements TowerUpgradeListener {
     // ゲームオーバー画面を閉じる
     const overlay = document.getElementById('game-over-overlay')
     overlay?.remove()
+    
+    // 結果画面も閉じる
+    const resultsOverlay = document.getElementById('game-results-overlay')
+    resultsOverlay?.remove()
+    
+    // ゲームオーバーフラグをリセット
+    this.gameOverShown = false
     
     // ゲーム状態をリセット
     this.gameState.reset()
