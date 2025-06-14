@@ -143,6 +143,7 @@ export class TutorialUI {
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         z-index: 10002;
+        pointer-events: auto !important;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         color: #e8f4f8;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -299,6 +300,7 @@ export class TutorialUI {
         display: flex;
         gap: 12px;
         z-index: 10003;
+        pointer-events: auto !important;
       }
 
       .tutorial-nav-btn {
@@ -504,18 +506,32 @@ export class TutorialUI {
     // ESCキーでチュートリアルを閉じる
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && this.isVisible) {
+        console.log('🎓 ESC key pressed, closing tutorial')
         this.hide()
         if (this.onClose) this.onClose()
       }
     })
 
-    // オーバーレイクリックで閉じる（コンテンツエリア以外）
+    // オーバーレイクリック処理（詳細ログ付き）
     this.overlay?.addEventListener('click', (event) => {
+      console.log('🎓 Tutorial overlay click detected:', {
+        target: event.target,
+        targetClassName: (event.target as HTMLElement)?.className,
+        targetId: (event.target as HTMLElement)?.id,
+        currentTarget: event.currentTarget,
+        overlayElement: this.overlay
+      })
+      
+      // 背景（オーバーレイ自体）がクリックされた場合
       if (event.target === this.overlay) {
-        this.hide()
-        if (this.onClose) this.onClose()
+        console.log('🎓 Background clicked - preventing game interaction, not closing tutorial')
+        event.preventDefault()
+        event.stopPropagation()
+        // 背景クリックでチュートリアルは閉じない（ユーザビリティ向上のため）
       }
     })
+
+    console.log('🎓 Tutorial event listeners set up successfully')
   }
 
   /**
@@ -595,12 +611,23 @@ export class TutorialUI {
     prevBtn.innerHTML = '<span class="tutorial-icon">◀</span>戻る'
     prevBtn.style.pointerEvents = 'auto'
     prevBtn.style.zIndex = '10004'
+    prevBtn.style.cursor = 'pointer'
+    prevBtn.style.position = 'relative'
     prevBtn.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
       console.log('🎓 Tutorial: Previous button clicked')
-      if (this.onPrevious) this.onPrevious()
+      if (this.onPrevious) {
+        this.onPrevious()
+      } else {
+        console.warn('🎓 onPrevious handler not set')
+      }
     })
+    
+    // マウスイベントのデバッグログ
+    prevBtn.addEventListener('mousedown', () => console.log('🎓 Previous button: mousedown'))
+    prevBtn.addEventListener('mouseup', () => console.log('🎓 Previous button: mouseup'))
+    prevBtn.addEventListener('mouseover', () => console.log('🎓 Previous button: mouseover'))
 
     // スキップボタン
     const skipBtn = document.createElement('button')
@@ -609,12 +636,23 @@ export class TutorialUI {
     skipBtn.innerHTML = '<span class="tutorial-icon">⏭</span>スキップ'
     skipBtn.style.pointerEvents = 'auto'
     skipBtn.style.zIndex = '10004'
+    skipBtn.style.cursor = 'pointer'
+    skipBtn.style.position = 'relative'
     skipBtn.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
       console.log('🎓 Tutorial: Skip button clicked')
-      if (this.onSkip) this.onSkip()
+      if (this.onSkip) {
+        this.onSkip()
+      } else {
+        console.warn('🎓 onSkip handler not set')
+      }
     })
+    
+    // マウスイベントのデバッグログ
+    skipBtn.addEventListener('mousedown', () => console.log('🎓 Skip button: mousedown'))
+    skipBtn.addEventListener('mouseup', () => console.log('🎓 Skip button: mouseup'))
+    skipBtn.addEventListener('mouseover', () => console.log('🎓 Skip button: mouseover'))
 
     // 次へボタン
     const nextBtn = document.createElement('button')
@@ -623,12 +661,23 @@ export class TutorialUI {
     nextBtn.innerHTML = `<span class="tutorial-icon">${isLastStep ? '🎉' : '▶'}</span>${isLastStep ? '完了' : '次へ'}`
     nextBtn.style.pointerEvents = 'auto'
     nextBtn.style.zIndex = '10004'
+    nextBtn.style.cursor = 'pointer'
+    nextBtn.style.position = 'relative'
     nextBtn.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
       console.log('🎓 Tutorial: Next button clicked')
-      if (this.onNext) this.onNext()
+      if (this.onNext) {
+        this.onNext()
+      } else {
+        console.warn('🎓 onNext handler not set')
+      }
     })
+    
+    // マウスイベントのデバッグログ
+    nextBtn.addEventListener('mousedown', () => console.log('🎓 Next button: mousedown'))
+    nextBtn.addEventListener('mouseup', () => console.log('🎓 Next button: mouseup'))
+    nextBtn.addEventListener('mouseover', () => console.log('🎓 Next button: mouseover'))
 
     // ボタンを追加
     this.navigationPanel.appendChild(prevBtn)
@@ -636,6 +685,35 @@ export class TutorialUI {
     this.navigationPanel.appendChild(nextBtn)
 
     console.log('🎓 Tutorial: Navigation buttons created and styled')
+    
+    // 詳細な状態確認ログ
+    setTimeout(() => {
+      console.log('🎓 Navigation Panel State Check:')
+      console.log(`  Panel exists: ${!!this.navigationPanel}`)
+      console.log(`  Panel in DOM: ${this.navigationPanel ? document.contains(this.navigationPanel) : false}`)
+      console.log(`  Panel children: ${this.navigationPanel?.children.length || 0}`)
+      
+      const buttons = ['tutorial-prev', 'tutorial-next', 'tutorial-skip']
+      buttons.forEach(id => {
+        const btn = document.getElementById(id)
+        if (btn) {
+          const rect = btn.getBoundingClientRect()
+          const styles = window.getComputedStyle(btn)
+          console.log(`  Button ${id}:`, {
+            exists: true,
+            visible: rect.width > 0 && rect.height > 0,
+            position: `${rect.left}, ${rect.top}`,
+            size: `${rect.width}x${rect.height}`,
+            pointerEvents: styles.pointerEvents,
+            zIndex: styles.zIndex,
+            cursor: styles.cursor,
+            disabled: (btn as HTMLButtonElement).disabled
+          })
+        } else {
+          console.log(`  Button ${id}: NOT FOUND`)
+        }
+      })
+    }, 100)
   }
 
   /**

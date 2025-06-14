@@ -1496,12 +1496,28 @@ export class Game implements TowerUpgradeListener {
       // チュートリアルUIイベントハンドラー設定
       const tutorialUI = (this.tutorialSystem as any).tutorialUI
       if (tutorialUI) {
+        console.log('🎓 Setting tutorial UI event handlers...')
         tutorialUI.setEventHandlers({
-          onNext: () => this.tutorialSystem?.nextStep(),
-          onPrevious: () => this.tutorialSystem?.previousStep(),
-          onSkip: () => this.tutorialSystem?.skipTutorial(),
-          onClose: () => this.tutorialSystem?.skipTutorial()
+          onNext: () => {
+            console.log('🎓 onNext handler called')
+            this.tutorialSystem?.nextStep()
+          },
+          onPrevious: () => {
+            console.log('🎓 onPrevious handler called') 
+            this.tutorialSystem?.previousStep()
+          },
+          onSkip: () => {
+            console.log('🎓 onSkip handler called')
+            this.tutorialSystem?.skipTutorial()
+          },
+          onClose: () => {
+            console.log('🎓 onClose handler called')
+            this.tutorialSystem?.skipTutorial()
+          }
         })
+        console.log('🎓 Tutorial UI event handlers set successfully')
+      } else {
+        console.error('❌ TutorialUI not found in TutorialSystem')
       }
       
       console.log('🎓 Tutorial system initialized')
