@@ -169,6 +169,8 @@ if (import.meta.env.DEV) {
       console.log('  diagnoseClickability() - Diagnose UI button clickability issues')
       console.log('  debugTutorialButtons() - Debug tutorial button states')
       console.log('  forceTestTutorial() - Force start tutorial for testing')
+      console.log('  emergencyTutorialFix() - Emergency tutorial system reset and fix')
+      console.log('  testTutorialUIBlocking() - Test tutorial UI blocking functionality')
       console.log('\nKeyboard shortcuts:')
       console.log('  Ctrl+Shift+D - Run debug')
       console.log('  Ctrl+Shift+T - Test buttons')
@@ -217,8 +219,8 @@ if (import.meta.env.DEV) {
   ;(window as any).diagnoseClickability = () => {
     console.log('🔍 === DIAGNOSING UI CLICKABILITY ===')
     const game = (window as any).game
-    if (game && game.diagnoseuClickability) {
-      game.diagnoseuClickability()
+    if (game && game.diagnoseClickability) {
+      game.diagnoseClickability()
     } else {
       console.error('❌ Game instance or diagnosis method not available')
     }
@@ -241,6 +243,61 @@ if (import.meta.env.DEV) {
       game.forceTestTutorial()
     } else {
       console.error('❌ Game instance or tutorial test method not available')
+    }
+  }
+
+  // 緊急チュートリアル修復コマンド
+  ;(window as any).emergencyTutorialFix = () => {
+    console.log('🚨 === EMERGENCY TUTORIAL FIX ===')
+    
+    // 既存のチュートリアル要素をすべて削除
+    const existingOverlay = document.getElementById('tutorial-overlay')
+    if (existingOverlay) {
+      console.log('🗑️ Removing existing tutorial overlay')
+      existingOverlay.remove()
+    }
+    
+    // チュートリアルスタイルを削除
+    const existingStyles = document.getElementById('tutorial-styles')
+    if (existingStyles) {
+      console.log('🗑️ Removing existing tutorial styles')
+      existingStyles.remove()
+    }
+    
+    // ゲームのチュートリアルシステムを再初期化
+    const game = (window as any).game
+    if (game) {
+      console.log('🔄 Reinitializing tutorial system')
+      try {
+        // プライベートメンバーに直接アクセスして強制リセット
+        ;(game as any).tutorialSystem = null
+        
+        // 新しいチュートリアルシステムを初期化
+        ;(game as any).initializeTutorial()
+        
+        setTimeout(() => {
+          console.log('🎓 Force starting tutorial after reset')
+          game.startTutorial()
+          
+          setTimeout(() => {
+            console.log('🔍 Post-emergency-fix verification')
+            game.debugTutorialButtons()
+          }, 2000)
+        }, 1000)
+        
+      } catch (error) {
+        console.error('❌ Emergency fix failed:', error)
+      }
+    }
+  }
+
+  ;(window as any).testTutorialUIBlocking = () => {
+    console.log('🧪 === TEST TUTORIAL UI BLOCKING ===')
+    const game = (window as any).game
+    if (game && game.testTutorialUIBlocking) {
+      game.testTutorialUIBlocking()
+    } else {
+      console.error('❌ Game instance or test method not available')
     }
   }
   

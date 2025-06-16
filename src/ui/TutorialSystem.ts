@@ -1,5 +1,6 @@
 import { GameState } from '@/game/GameState'
 import { TutorialUI } from './TutorialUI'
+import { Game } from '@/game/Game'
 
 export interface TutorialStep {
   id: string
@@ -40,6 +41,8 @@ export class TutorialSystem {
   private endTime: number | undefined
   private onComplete?: () => void
   private onSkip?: () => void
+  private game?: Game
+  private previousGameSpeed?: number
   
   // ローカルストレージキー
   private readonly STORAGE_KEY = 'tower-defense-tutorial-progress'
@@ -51,6 +54,13 @@ export class TutorialSystem {
     this.loadProgress()
     
     console.log('🎓 TutorialSystem initialized')
+  }
+
+  /**
+   * Game参照を設定
+   */
+  public setGame(game: Game): void {
+    this.game = game
   }
 
   private setupTutorialSteps(): void {
@@ -213,6 +223,13 @@ export class TutorialSystem {
     this.currentStepIndex = 0
     this.startTime = Date.now()
     
+    // チュートリアル開始時にゲームを一時停止
+    if (this.game) {
+      this.previousGameSpeed = this.game.getGameSpeed()
+      this.game.setGameSpeed(0)
+      console.log('⏸️ Game paused for tutorial')
+    }
+    
     console.log('🎓 Starting tutorial...')
     this.showCurrentStep()
   }
@@ -229,6 +246,12 @@ export class TutorialSystem {
     
     this.tutorialUI.hide()
     this.saveProgress()
+    
+    // ゲーム速度を元に戻す
+    if (this.game && this.previousGameSpeed !== undefined) {
+      this.game.setGameSpeed(this.previousGameSpeed)
+      console.log('▶️ Game resumed')
+    }
     
     if (this.onSkip) {
       this.onSkip()
@@ -308,6 +331,12 @@ export class TutorialSystem {
     
     this.tutorialUI.showCompletion()
     this.saveProgress()
+    
+    // ゲーム速度を元に戻す
+    if (this.game && this.previousGameSpeed !== undefined) {
+      this.game.setGameSpeed(this.previousGameSpeed)
+      console.log('▶️ Game resumed')
+    }
     
     if (this.onComplete) {
       this.onComplete()

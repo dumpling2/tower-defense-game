@@ -1,6 +1,7 @@
 import { GameState } from '@/game/GameState'
 import { WaveSystem } from '@/systems/WaveSystem'
 import { EconomySystem } from '@/game/EconomySystem'
+import { VictorySystem } from '@/systems/VictorySystem'
 
 /**
  * ゲームHUD（ヘッドアップディスプレイ）
@@ -10,6 +11,7 @@ export class GameHUD {
   private gameState: GameState
   private waveSystem: WaveSystem
   private economySystem: EconomySystem
+  private victorySystem: VictorySystem | null = null
   private hudElement: HTMLElement | null = null
   private updateInterval: number | null = null
 
@@ -19,6 +21,18 @@ export class GameHUD {
     this.economySystem = economySystem
     this.createHUD()
     this.startUpdating()
+  }
+
+  /**
+   * 勝利システムを設定（ゲーム開始後に呼び出される）
+   */
+  public setVictorySystem(victorySystem: VictorySystem): void {
+    this.victorySystem = victorySystem
+    // 勝利進捗セクションを表示
+    const victorySection = document.getElementById('hud-victory-section')
+    if (victorySection) {
+      victorySection.style.display = 'block'
+    }
   }
 
   private createHUD(): void {
@@ -69,6 +83,17 @@ export class GameHUD {
             <span id="hud-energy" class="hud-value-small">0</span>
           </div>
         </div>
+
+        <div class="hud-section victory-progress" id="hud-victory-section" style="display: none;">
+          <div class="hud-item victory-item">
+            <span class="hud-icon">🏆</span>
+            <span class="hud-label">勝利進捗:</span>
+            <div class="victory-progress-bar">
+              <div id="hud-victory-progress" class="victory-progress-fill" style="width: 0%"></div>
+            </div>
+            <span id="hud-victory-text" class="hud-value-small">0/15</span>
+          </div>
+        </div>
       </div>
     `
 
@@ -78,6 +103,71 @@ export class GameHUD {
     document.body.appendChild(hudContainer)
 
     this.hudElement = document.getElementById('game-hud')
+    
+    // 勝利進捗バーのスタイルを追加
+    this.addVictoryProgressStyles()
+  }
+
+  private addVictoryProgressStyles(): void {
+    // スタイルが既に存在する場合はスキップ
+    if (document.getElementById('victory-progress-styles')) {
+      return
+    }
+
+    const styles = `
+      <style id="victory-progress-styles">
+        .victory-progress {
+          margin-top: 8px;
+        }
+        
+        .victory-item {
+          flex-direction: column !important;
+          align-items: flex-start !important;
+          gap: 4px;
+        }
+        
+        .victory-progress-bar {
+          width: 100%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .victory-progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+          border-radius: 3px;
+          transition: width 0.3s ease, background 0.3s ease;
+          position: relative;
+        }
+        
+        .victory-progress-fill:after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+          animation: shine 2s infinite;
+        }
+        
+        @keyframes shine {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        
+        .hud-section.victory-progress {
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+          padding-top: 8px;
+          margin-top: 8px;
+        }
+      </style>
+    `
+
+    document.head.insertAdjacentHTML('beforeend', styles)
   }
 
   private startUpdating(): void {
@@ -128,6 +218,44 @@ export class GameHUD {
       lives?.classList.add('critical')
     } else {
       lives?.classList.remove('critical')
+    }
+
+    // 勝利進捗の更新
+    this.updateVictoryProgress()
+  }
+
+  private updateVictoryProgress(): void {
+    if (!this.victorySystem) return
+
+    const mainCondition = this.victorySystem.getMainCondition()
+    if (!mainCondition) return
+
+    const progress = mainCondition.checkProgress()
+    const currentWave = this.waveSystem.getCurrentWave()
+    const targetWave = mainCondition.targetValue
+
+    // 進捗バーを更新
+    const progressBar = document.getElementById('hud-victory-progress')
+    if (progressBar) {
+      const percentage = Math.round(progress * 100)
+      progressBar.style.width = `${percentage}%`
+      
+      // 進捗に応じて色を変更
+      if (percentage >= 100) {
+        progressBar.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)'
+      } else if (percentage >= 75) {
+        progressBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)'
+      } else if (percentage >= 50) {
+        progressBar.style.background = 'linear-gradient(90deg, #3498db, #2980b9)'
+      } else {
+        progressBar.style.background = 'linear-gradient(90deg, #95a5a6, #7f8c8d)'
+      }
+    }
+
+    // 進捗テキストを更新
+    const progressText = document.getElementById('hud-victory-text')
+    if (progressText) {
+      progressText.textContent = `${currentWave}/${targetWave}`
     }
   }
 
